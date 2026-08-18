@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.mp4
+*.mp3
+*.wav
+*.db
+downloads/
+clips/
+outputs/
+transcripts/
+.git/
+*.log
