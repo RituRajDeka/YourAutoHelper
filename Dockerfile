@@ -1,33 +1,29 @@
-FROM python:3.11-slim
+# Multi-stage build: builder stage for Node assets
+FROM node:20-alpine AS frontend-builder
+WORKDIR /build
+COPY package*.json tsconfig.json vite.config.ts ./
+COPY web/ ./web/
+RUN npm ci && npm run build
 
-# Install only ffmpeg (needed for video rendering)
+# Python runner stage
+FROM python:3.11-slim
+WORKDIR /app
+
+# Install ffmpeg, curl, and system dependencies
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Copy python dependencies and install lightweight list
+COPY requirements-deploy.txt .
+RUN pip install --no-cache-dir -r requirements-deploy.txt
 
-# Copy requirements first (for Docker cache)
-COPY requirements.txt .
+# Copy built frontend assets from builder stage
+COPY --from=frontend-builder /build/web/dist ./web/dist
 
-# Install only lightweight dependencies
-RUN pip install --no-cache-dir \
-    fastapi \
-    uvicorn \
-    yt-dlp \
-    groq \
-    boto3 \
-    google-api-python-client \
-    google-auth-oauthlib \
-    requests \
-    python-multipart \
-    httpx \
-    pydantic
-
-# Copy app code
+# Copy backend app source code
 COPY app/ ./app/
-COPY web/ ./web/
 
 # Create data directories
 RUN mkdir -p downloads clips outputs
