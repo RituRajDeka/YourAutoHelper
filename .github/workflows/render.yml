@@ -22,8 +22,9 @@ jobs:
         run: pip3 install -r requirements.txt
       - name: Run worker
         env:
-          JOB_ID: ${{ inputs.job_id }}
-          CALLBACK_TOKEN: ${{ inputs.callback_token }}
-          SERVER_URL: ${{ inputs.server_url }}
           PYTHONPATH: ${{ github.workspace }}
-        run: python3 app/gha_worker.py
+        run: |
+          python3 app/gha_worker.py \
+            --job-id "${{ inputs.job_id }}" \
+            --callback-token "${{ inputs.callback_token }}" \
+            --server-url "${{ inputs.server_url }}"
