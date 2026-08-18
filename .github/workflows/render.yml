@@ -4,13 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       job_id:
-        description: 'Job ID to process'
         required: true
       callback_token:
-        description: 'Secure callback token'
         required: true
       server_url:
-        description: 'Server URL'
         required: true
 
 jobs:
@@ -21,25 +18,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: false
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install system dependencies
+      - name: Set up Python
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y python3 python3-pip ffmpeg
 
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip3 install -r requirements.txt
 
-      - name: Run render worker
+      - name: Run worker
         env:
           JOB_ID: ${{ inputs.job_id }}
           CALLBACK_TOKEN: ${{ inputs.callback_token }}
           SERVER_URL: ${{ inputs.server_url }}
-        run: python -m app.gha_worker
+        run: python3 -m app.gha_worker
