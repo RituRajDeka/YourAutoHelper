@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+yt-dlp
+groq
+boto3
+google-api-python-client
+google-auth-oauthlib
+requests
+python-multipart
+httpx
+pydantic
