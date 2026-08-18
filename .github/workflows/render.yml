@@ -10,7 +10,7 @@ on:
         description: 'Secure callback token'
         required: true
       server_url:
-        description: 'Coolify/Railway server URL'
+        description: 'Server URL'
         required: true
 
 jobs:
@@ -22,21 +22,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
-      - name: Install FFmpeg
-        run: sudo apt-get install -y ffmpeg
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Run render worker
-        run: python -m app.gha_worker
         env:
           JOB_ID: ${{ inputs.job_id }}
           CALLBACK_TOKEN: ${{ inputs.callback_token }}
           SERVER_URL: ${{ inputs.server_url }}
+        run: python -m app.gha_worker
