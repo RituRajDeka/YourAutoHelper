@@ -62,11 +62,15 @@ def get_auth_url(redirect_uri: str) -> str:
         scopes=SCOPES,
         redirect_uri=redirect_uri
     )
-    auth_url, _ = flow.authorization_url(
+    auth_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
         prompt='consent'
     )
+    from app.db import set_setting
+    set_setting("youtube_oauth_state", state)
+    if hasattr(flow, "code_verifier"):
+        set_setting("youtube_oauth_code_verifier", flow.code_verifier)
     return auth_url
 
 def save_oauth_callback(code: str, redirect_uri: str):
@@ -80,6 +84,10 @@ def save_oauth_callback(code: str, redirect_uri: str):
         scopes=SCOPES,
         redirect_uri=redirect_uri
     )
+    from app.db import get_setting
+    code_verifier = get_setting("youtube_oauth_code_verifier")
+    if code_verifier:
+        flow.code_verifier = code_verifier
     flow.fetch_token(code=code)
     credentials = flow.credentials
     
