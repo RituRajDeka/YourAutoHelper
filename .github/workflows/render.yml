@@ -1,0 +1,42 @@
+name: Render ClipForge Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID to process'
+        required: true
+      callback_token:
+        description: 'Secure callback token'
+        required: true
+      server_url:
+        description: 'Coolify/Railway server URL'
+        required: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install FFmpeg
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run render worker
+        run: python -m app.gha_worker
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          CALLBACK_TOKEN: ${{ inputs.callback_token }}
+          SERVER_URL: ${{ inputs.server_url }}
