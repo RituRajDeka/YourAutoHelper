@@ -425,6 +425,14 @@ def generate(req: GenerateRequest, request: Request) -> dict:
         success = github_dispatch.dispatch_workflow(job_id, callback_token, server_url)
         if success:
             logger.info("[%s] remote job dispatched successfully", job_id)
+            # Register in-memory job placeholder to support SSE /progress and /result
+            job = jobs.Job(req)
+            job.id = job_id
+            job.status = "queued"
+            job.stage = "queued"
+            job.message = "Remote job dispatched to GitHub Actions."
+            with jobs._JOBS_LOCK:
+                jobs._JOBS[job_id] = job
             return {"job_id": job_id}
         else:
             db.update_job_status(job_id, 'FAILED', error="GitHub dispatch failed.")
@@ -637,9 +645,9 @@ def update_settings(req: UpdateSettingsRequest) -> dict:
             raise ValueError("No setting saving function found in database module.")
             
         if req.shorts_per_day is not None:
-            set_fn("shorts_per_day", str(req.shorts_per_day))
+            set_fn("shorts_per_day", req.shorts_per_day)
         if req.buffer_days is not None:
-            set_fn("buffer_days", str(req.buffer_days))
+            set_fn("buffer_days", req.buffer_days)
         if req.youtube_client_id is not None:
             set_fn("youtube_client_id", req.youtube_client_id)
         if req.youtube_client_secret is not None:
@@ -707,7 +715,7 @@ def get_jobs() -> list:
 
 class JobCallbackRequest(BaseModel):
     status: Optional[str] = None
-    progress: Optional[int] = None
+    progress: Optional[float] = None
     message: Optional[str] = None
     error: Optional[str] = None
     s3_url: Optional[str] = None
@@ -779,10 +787,12 @@ def get_job_config(
         "groq_api_key": groq_api_key,
         "edit_plan": edit_plan,
         "source_video": source_video,
+        "req": req_payload,
         "request_payload": req_payload
     }
 
 
+@app.post("/api/jobs/{job_id}/callback")
 @app.patch("/api/jobs/{job_id}/callback")
 def job_callback(
     job_id: str,

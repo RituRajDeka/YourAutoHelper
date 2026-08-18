@@ -49,11 +49,13 @@ class SchedulerWorker:
                 # 1) Sync channels to find new videos
                 sync_channels()
                 
-                # 2) Process next pending job if any
-                job = get_next_pending_job()
-                if job:
-                    self._process_job(job)
-                    continue
+                # 2) Process next pending job if any (only in local mode!)
+                run_mode = get_setting('run_mode', 'local')
+                if run_mode == 'local':
+                    job = get_next_pending_job()
+                    if job:
+                        self._process_job(job)
+                        continue
                     
                 # 3) Check if we need to schedule more shorts
                 self._check_and_enqueue_next()
@@ -64,13 +66,20 @@ class SchedulerWorker:
             # Sleep 60 seconds between checks
             time.sleep(60)
 
-    def _check_and_enqueue_next(self):
-        """
-        Determines if we need more scheduled shorts to maintain the target daily posting frequency,
-        and if so, downloads the next new video and adds a job.
-        """
-        shorts_per_day = get_setting('shorts_per_day', 3)
-        buffer_days = get_setting('buffer_days', 2)
+        try:
+            shorts_per_day = int(get_setting('shorts_per_day', 3))
+            if shorts_per_day <= 0:
+                shorts_per_day = 3
+        except (TypeError, ValueError):
+            shorts_per_day = 3
+
+        try:
+            buffer_days = int(get_setting('buffer_days', 2))
+            if buffer_days < 0:
+                buffer_days = 2
+        except (TypeError, ValueError):
+            buffer_days = 2
+
         target_count = shorts_per_day * buffer_days
         
         # Count future scheduled shorts
@@ -109,7 +118,63 @@ class SchedulerWorker:
         next_video = new_videos[0]
         video_id = next_video['id']
         
-        # Download video
+        # Check run mode
+        run_mode = get_setting('run_mode', 'local')
+        if run_mode == 'remote':
+            import secrets
+            import uuid
+            import json
+            from . import github_dispatch, jobs
+            from .models import GenerateRequest, AspectRatio, FitMode
+            
+            # Generate callback token and job ID
+            callback_token = secrets.token_hex(16)
+            job_id = uuid.uuid4().hex
+            
+            # Construct default GenerateRequest
+            req = GenerateRequest(
+                video_url=next_video['url'],
+                aspect_ratio=AspectRatio.NINE_16,
+                fit_mode=FitMode.CROP,
+                num_clips=3,
+                clip_length=30,
+                caption_style="bold_white"
+            )
+            req_json = req.model_dump_json()
+            
+            # Add to jobs table
+            add_job(
+                job_id=job_id,
+                source_video_id=video_id,
+                status='PENDING',
+                request_json=req_json,
+                callback_token=callback_token
+            )
+            
+            # Get server_url
+            server_url = get_setting("public_server_url")
+            if not server_url:
+                logger.error("Remote scheduler dispatch failed: 'public_server_url' setting is not configured.")
+                update_job_status(job_id, 'FAILED', error="public_server_url not configured.")
+                return
+                
+            success = github_dispatch.dispatch_workflow(job_id, callback_token, server_url)
+            if success:
+                logger.info("Automatically enqueued and dispatched remote job %s for video ID %s", job_id, video_id)
+                # Register in-memory job placeholder for SSE /progress and /result
+                job = jobs.Job(req)
+                job.id = job_id
+                job.status = "queued"
+                job.stage = "queued"
+                job.message = "Remote scheduler job dispatched to GitHub Actions."
+                with jobs._JOBS_LOCK:
+                    jobs._JOBS[job_id] = job
+            else:
+                logger.error("Failed to automatically dispatch remote job %s", job_id)
+                update_job_status(job_id, 'FAILED', error="GitHub Actions dispatch failed.")
+            return
+
+        # Local mode: Download video
         download_path = download_video_source(video_id)
         if download_path:
             # Enqueue job

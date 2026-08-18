@@ -104,7 +104,7 @@ class TestMainRoutes(unittest.TestCase):
         response = self.client.post("/api/settings", json={"shorts_per_day": 5})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "success"})
-        mock_set_setting.assert_called_once_with("shorts_per_day", "5")
+        mock_set_setting.assert_called_once_with("shorts_per_day", 5)
 
     @patch('app.main.query_recent_shorts')
     def test_get_shorts(self, mock_query_shorts):

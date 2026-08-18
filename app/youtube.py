@@ -97,6 +97,7 @@ def upload_scheduled_short(short_id: str):
     Updates short database status accordingly to 'scheduled', 'published', or 'failed'.
     """
     logger.info(f"Starting YouTube upload flow for short_id: {short_id}")
+    temp_local_path = None
     try:
         # 1. Fetch the short metadata from the database
         short = get_generated_short(short_id)
@@ -149,14 +150,37 @@ def upload_scheduled_short(short_id: str):
             )
             return
 
-        if not os.path.exists(file_path):
-            logger.error(f"Video file not found at local path: {file_path}")
-            update_short_publish_status(
-                short_id,
-                'failed',
-                error=f"Video file not found on filesystem at: {file_path}"
-            )
-            return
+        if file_path.startswith(('http://', 'https://')):
+            import requests
+            import tempfile
+            logger.info(f"Downloading remote video from {file_path} to temp file...")
+            try:
+                r = requests.get(file_path, stream=True, timeout=30)
+                r.raise_for_status()
+                with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as f:
+                    temp_local_path = f.name
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                file_path = temp_local_path
+                logger.info(f"Remote video downloaded successfully to {file_path}")
+            except Exception as download_err:
+                logger.error(f"Failed to download remote video file: {download_err}")
+                update_short_publish_status(
+                    short_id,
+                    'failed',
+                    error=f"Failed to download remote video file: {download_err}"
+                )
+                return
+        else:
+            if not os.path.exists(file_path):
+                logger.error(f"Video file not found at local path: {file_path}")
+                update_short_publish_status(
+                    short_id,
+                    'failed',
+                    error=f"Video file not found on filesystem at: {file_path}"
+                )
+                return
 
         media = MediaFileUpload(
             file_path,
@@ -251,3 +275,10 @@ def upload_scheduled_short(short_id: str):
             update_short_publish_status(short_id, 'failed', error=str(e))
         except Exception as db_err:
             logger.error(f"Failed to record execution error to database for short {short_id}: {db_err}")
+    finally:
+        if temp_local_path and os.path.exists(temp_local_path):
+            try:
+                os.unlink(temp_local_path)
+                logger.info(f"Cleaned up temporary video file: {temp_local_path}")
+            except Exception as clean_err:
+                logger.warning(f"Failed to delete temp file {temp_local_path}: {clean_err}")
