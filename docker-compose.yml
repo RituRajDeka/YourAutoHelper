@@ -1,0 +1,113 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ClipForge — YouTube Shorts Factory
+# ─────────────────────────────────────────────────────────────────────────────
+# Usage:
+#   docker compose up -d              # Start (uses local OmniRoute on host)
+#   docker compose --profile omniroute up -d  # Also start containerised OmniRoute
+#
+# Required env vars (copy .env.example to .env and fill in):
+#   GROQ_API_KEY          Groq API key (tier-3 LLM fallback)
+#   OMNIROUTE_API_KEY     Key for OmniRoute access control (optional)
+#   OMNIROUTE_CLOUD_KEY   Key for OmniRoute cloud fallback (optional)
+#   YOUTUBE_CLIENT_ID     YouTube OAuth client ID
+#   YOUTUBE_CLIENT_SECRET YouTube OAuth client secret
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Main application ────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: clipforge-shorts-factory:latest
+    container_name: clipforge-app
+    restart: unless-stopped
+
+    ports:
+      - "${HOST_PORT:-8000}:8000"
+
+    environment:
+      # Uvicorn
+      PORT: "8000"
+      WORKERS: "${WORKERS:-1}"
+
+      # LLM routing
+      OMNIROUTE_BASE_URL: "${OMNIROUTE_BASE_URL:-http://host.docker.internal:20128/v1}"
+      OMNIROUTE_API_KEY:  "${OMNIROUTE_API_KEY:-omniroute}"
+      OMNIROUTE_MODEL:    "${OMNIROUTE_MODEL:-auto}"
+      OMNIROUTE_CLOUD_KEY: "${OMNIROUTE_CLOUD_KEY:-}"
+      GROQ_API_KEY:       "${GROQ_API_KEY:-}"
+
+      # YouTube
+      YOUTUBE_CLIENT_ID:     "${YOUTUBE_CLIENT_ID:-}"
+      YOUTUBE_CLIENT_SECRET: "${YOUTUBE_CLIENT_SECRET:-}"
+
+      # Faster-Whisper device (cpu / cuda)
+      WHISPER_DEVICE: "${WHISPER_DEVICE:-cpu}"
+
+    volumes:
+      - clips:/app/clips
+      - downloads:/app/downloads
+      - transcripts:/app/transcripts
+      - uploads:/app/uploads
+      - music:/app/assets/music
+      - db_data:/app
+      # Persistent user data directory
+      - "${DATA_DIR:-./data}:/app/data"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    # Allow the container to reach OmniRoute on the host machine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # ── Optional: use NVIDIA GPU for Whisper transcription ─────────────────
+    # Uncomment the block below and set WHISPER_DEVICE=cuda
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+
+  # ── Optional: containerised OmniRoute sidecar ───────────────────────────────
+  # Enable with: docker compose --profile omniroute up -d
+  omniroute:
+    profiles: ["omniroute"]
+    image: diegosouzapw/omniroute:latest
+    container_name: omniroute-gateway
+    restart: unless-stopped
+    ports:
+      - "20128:20128"
+    environment:
+      PORT: "20128"
+    volumes:
+      - omniroute_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:20128/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+volumes:
+  clips:
+  downloads:
+  transcripts:
+  uploads:
+  music:
+  db_data:
+  omniroute_data:

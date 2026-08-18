@@ -1,0 +1,44 @@
+# Virtual environment
+.venv/
+venv/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Video and audio files
+*.mp4
+*.mp3
+*.wav
+*.mkv
+*.avi
+*.mov
+*.webm
+
+# Downloaded/output files
+downloads/
+outputs/
+clips/
+shorts/
+temp/
+tmp/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Environment files
+.env
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

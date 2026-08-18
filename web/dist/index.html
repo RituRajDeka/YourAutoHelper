@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClipCut AI — AI Short Video Creator</title>
+    <link rel="stylesheet" href="style.css?v=5">
+</head>
+<body>
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">OC</div>
+            <div class="brand-text">
+                <span class="brand-name">OpenClipCut AI</span>
+                <span class="brand-tag">Local Studio</span>
+            </div>
+        </div>
+
+        <nav>
+            <button class="nav-item active" data-page="create">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                <span>Create Shorts</span>
+            </button>
+
+            <button class="nav-item" data-page="history">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>History</span>
+            </button>
+
+            <button class="nav-item" data-page="settings">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>Settings</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="device-status-badge">
+                <span>Compute Engine</span>
+                <div class="status-dot-container">
+                    <span class="status-dot" id="device-status-dot"></span>
+                    <span id="device-status-label">Auto</span>
+                </div>
+            </div>
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+        <header class="topbar">
+            <div>
+                <h1 id="page-title">Create Shorts</h1>
+                <p id="page-description">Turn long videos into viral, high-converting short clips with AI.</p>
+            </div>
+        </header>
+
+        <!-- ===================================================================
+             CREATE PAGE
+             =================================================================== -->
+        <section id="create-page" class="page active">
+
+            <!-- STEP 1: SOURCE VIDEO -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-step-num">1</span>
+                        <span>Source Video</span>
+                    </div>
+                </div>
+
+                <div class="source-grid">
+                    <div class="upload-box" id="drop-zone">
+                        <div class="upload-icon-circle">
+                            <svg xmlns="http://www.w3.org/2000/svg" style="width:24px;height:24px" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                        </div>
+                        <h4>Upload Video File</h4>
+                        <p>Drag & drop MP4, MOV, or WEBM video here</p>
+                        <button type="button" class="btn-secondary" id="upload-button">Browse File</button>
+                        <input type="file" id="video-file" accept="video/*" hidden>
+                        <div id="selected-file" style="margin-top:10px; font-weight:600; color:var(--success); font-size:13px;"></div>
+                    </div>
+
+                    <div class="url-box">
+                        <h4>
+                            <svg xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;color:var(--primary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                            </svg>
+                            <span>Use Video URL</span>
+                        </h4>
+                        <p>Paste a YouTube or supported public video link.</p>
+                        <input type="url" id="video-url" placeholder="https://www.youtube.com/watch?v=...">
+                        
+                        <!-- Video Download / Prefetch Progress UI -->
+                        <div id="prefetch-progress-container" class="prefetch-progress-box hidden">
+                            <div class="prefetch-header">
+                                <span id="prefetch-status-title" class="prefetch-title">Downloading video...</span>
+                                <span id="prefetch-percentage" class="prefetch-badge">0%</span>
+                            </div>
+                            <div class="prefetch-bar-bg">
+                                <div id="prefetch-bar" class="prefetch-bar-fill" style="width: 0%"></div>
+                            </div>
+                            <div class="prefetch-stats">
+                                <span id="prefetch-size">0 MB / 0 MB</span>
+                                <span id="prefetch-speed">-- MB/s</span>
+                                <span id="prefetch-eta">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Preview Component -->
+                <div class="video-preview-container hidden" id="source-preview-wrapper">
+                    <video id="source-preview" controls></video>
+                </div>
+            </div>
+
+
+            <!-- STEP 2: CLIP SETTINGS -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-step-num">2</span>
+                        <span>Clip Framing & Duration</span>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="num-clips">Number of Clips</label>
+                        <input type="number" id="num-clips" value="3" min="1" max="50">
+                        <span class="help-text">Top highlighted windows to extract</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="clip-length">Clip Duration (seconds)</label>
+                        <input type="number" id="clip-length" placeholder="Auto adapt (30-60s)" min="5" max="600">
+                        <span class="help-text">Target duration per clip</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Aspect Ratio</label>
+                        <div class="pill-group" id="aspect-ratio-pills">
+                            <button type="button" class="pill-btn active" data-value="9:16">9:16 Shorts</button>
+                            <button type="button" class="pill-btn" data-value="16:9">16:9 Landscape</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fit Mode</label>
+                        <div class="pill-group" id="fit-mode-pills">
+                            <button type="button" class="pill-btn active" data-value="crop">Center Crop</button>
+                            <button type="button" class="pill-btn" data-value="square">Square 1:1</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- STEP 3: CAPTION SETTINGS & LIVE PREVIEW -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-step-num">3</span>
+                        <span>Caption Styling & Live Preview</span>
+                    </div>
+                </div>
+
+                <div class="caption-preview-section">
+
+                    <!-- Real-time Live Preview Canvas with Drag Overlay & Video -->
+                    <div class="caption-preview-box" id="caption-preview-box">
+                        <div class="preview-badge" id="preview-badge-label">Live Preview</div>
+                        <video id="preview-video-element" controls style="display:none; width:100%; height:100%; object-fit:contain; border-radius:12px;"></video>
+                        <div class="preview-caption-text" id="preview-text-element" tabindex="0" title="Click & Drag to position caption freely">
+                            <div class="drag-handle-hint">⋮⋮ Drag</div>
+                            Caption <span id="preview-highlight-word">Word</span>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label for="caption-style">Caption Style Preset</label>
+                            <select id="caption-style"></select>
+                        </div>
+
+                        <!-- IMPORTANT REQUIREMENT: Text Size Control -->
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Text Size (Scale Factor)</label>
+                            <div class="pill-group" id="text-size-pills">
+                                <button type="button" class="pill-btn" data-value="0.75">Small</button>
+                                <button type="button" class="pill-btn active" data-value="1.0">Medium</button>
+                                <button type="button" class="pill-btn" data-value="1.25">Large</button>
+                                <button type="button" class="pill-btn" data-value="1.5">Extra Large</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="language">Speech Language</label>
+                            <select id="language">
+                                <option value="">Auto Detect</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="font-family">Caption Font</label>
+                            <select id="font-family"></select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="caption-position">Vertical / Drag Position</label>
+                            <select id="caption-position">
+                                <option value="bottom">Bottom</option>
+                                <option value="center">Center</option>
+                                <option value="top">Top</option>
+                                <option value="custom" id="opt-custom-position" style="display:none;">Custom (Dragged)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="highlight-color">Active Word Highlight Color</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="highlight-color" value="#FFD400">
+                                <input type="text" id="highlight-color-hex" value="#FFD400">
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ADVANCED CAPTION OVERRIDES ACCORDION -->
+            <details class="accordion">
+                <summary>
+                    <div class="accordion-title-group">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;color:var(--primary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                        </svg>
+                        <span>Advanced Caption Styling Overrides</span>
+                    </div>
+                    <svg class="accordion-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </summary>
+                <div class="accordion-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="caption-rotation">Text Rotation (degrees)</label>
+                            <div class="range-wrapper">
+                                <input type="range" id="caption-rotation" min="-45" max="45" value="0">
+                                <span class="range-val" id="caption-rotation-val">0°</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="outline-width">Stroke / Outline Width (px)</label>
+                            <div class="range-wrapper">
+                                <input type="range" id="outline-width" min="0" max="30" value="5">
+                                <span class="range-val" id="outline-width-val">5px</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="outline-color">Stroke Color</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="outline-color" value="#000000">
+                                <input type="text" id="outline-color-hex" value="#000000">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="shadow-distance">Drop Shadow Distance (px)</label>
+                            <div class="range-wrapper">
+                                <input type="range" id="shadow-distance" min="0" max="30" value="2">
+                                <span class="range-val" id="shadow-distance-val">2px</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="shadow-color">Shadow Color</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="shadow-color" value="#000000">
+                                <input type="text" id="shadow-color-hex" value="#000000">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="toggle-label" style="margin-top:10px;">
+                                <input type="checkbox" id="background-enabled">
+                                <span>Enable Background Box</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="background-color">Background Box Color</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="background-color" value="#000000">
+                                <input type="text" id="background-color-hex" value="#000000">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="background-opacity">Background Box Opacity (%)</label>
+                            <div class="range-wrapper">
+                                <input type="range" id="background-opacity" min="0" max="100" value="80">
+                                <span class="range-val" id="background-opacity-val">80%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+
+            <!-- TITLE & HEADER BAR ACCORDION -->
+            <details class="accordion">
+                <summary>
+                    <div class="accordion-title-group">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;color:var(--primary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                        <span>Title & Header Bar Settings</span>
+                    </div>
+                    <svg class="accordion-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </summary>
+                <div class="accordion-content">
+                    <div class="form-grid">
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label for="bar-text">Header Title Overlay Text</label>
+                            <input type="text" id="bar-text" placeholder="e.g. MUST WATCH REEL 🔥">
+                            <span class="help-text">Appears at top of frame (great for Square 1:1 mode)</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bar-text-color">Title Text Color</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="bar-text-color" value="#FFFFFF">
+                                <input type="text" id="bar-text-color-hex" value="#FFFFFF">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bar-text-anim">Entrance Animation</label>
+                            <select id="bar-text-anim">
+                                <option value="none">None (Static)</option>
+                                <option value="fade">Fade In</option>
+                                <option value="slide">Slide Down</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+
+            <!-- CINEMATIC EFFECTS ACCORDION -->
+            <details class="accordion">
+                <summary>
+                    <div class="accordion-title-group">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;color:var(--primary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                        </svg>
+                        <span>Cinematic Video Effects</span>
+                    </div>
+                    <svg class="accordion-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </summary>
+                <div class="accordion-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="color-grade">Color Grade Look</label>
+                            <select id="color-grade">
+                                <option value="none">None (Original)</option>
+                                <option value="warm">Warm Film</option>
+                                <option value="cool">Cool Blue</option>
+                                <option value="teal_orange">Teal & Orange</option>
+                                <option value="vintage">Vintage Retro</option>
+                                <option value="vibrant">Vibrant Pop</option>
+                                <option value="bw">Black & White</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="cinematic-glow">
+                                <span>Glow Bloom Effect</span>
+                            </label>
+                            <div class="range-wrapper" style="margin-top:6px;">
+                                <input type="range" id="glow-strength" min="0" max="100" value="50">
+                                <span class="range-val" id="glow-strength-val">50%</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="cinematic-grain">
+                                <span>Film Grain</span>
+                            </label>
+                            <div class="range-wrapper" style="margin-top:6px;">
+                                <input type="range" id="grain-strength" min="0" max="100" value="40">
+                                <span class="range-val" id="grain-strength-val">40%</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="cinematic-vignette">
+                                <span>Vignette Corners</span>
+                            </label>
+                            <div class="range-wrapper" style="margin-top:6px;">
+                                <input type="range" id="vignette-strength" min="0" max="100" value="50">
+                                <span class="range-val" id="vignette-strength-val">50%</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="bottom-gradient">
+                                <span>Dark Bottom Gradient (Text Legibility)</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="letterbox">
+                                <span>Cinematic Letterbox Bars</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+
+            <!-- BACKGROUND MUSIC ACCORDION -->
+            <details class="accordion">
+                <summary>
+                    <div class="accordion-title-group">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;color:var(--primary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12 0c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-2" />
+                        </svg>
+                        <span>Background Music & Audio Ducking</span>
+                    </div>
+                    <svg class="accordion-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </summary>
+                <div class="accordion-content">
+                    <div class="form-grid">
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label for="music-track">Select Background Music Track</label>
+                            <div style="display:flex; gap:10px;">
+                                <select id="music-track" style="flex:1;">
+                                    <option value="">None (No Background Music)</option>
+                                </select>
+                                <button type="button" class="btn-secondary" id="suggest-music-btn">✨ AI Suggest Mood</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="music-volume">Music Volume (%)</label>
+                            <div class="range-wrapper">
+                                <input type="range" id="music-volume" min="0" max="100" value="35">
+                                <span class="range-val" id="music-volume-val">35%</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="music-duck">Voice Ducking Strength (%)</label>
+                            <div class="range-wrapper">
+                                <input type="range" id="music-duck" min="0" max="100" value="70">
+                                <span class="range-val" id="music-duck-val">70%</span>
+                            </div>
+                            <span class="help-text">Dips music loudness whenever speaker is talking</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="music-start">Music Start Position (seconds)</label>
+                            <input type="number" id="music-start" value="0" min="0">
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+
+            <!-- STEP 7: PROCESSING & GENERATE -->
+            <div class="card" style="border-color:var(--primary-border); background:var(--primary-light);">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-step-num" style="background:var(--primary); color:white;">4</span>
+                        <span>Compute Processing & Generation</span>
+                    </div>
+                </div>
+
+                <div class="form-grid" style="align-items:end; grid-template-columns: 240px 1fr;">
+                    <div class="form-group">
+                        <label for="device">Processing Engine</label>
+                        <select id="device">
+                            <option value="auto">Auto (GPU if available)</option>
+                            <option value="cpu">CPU Only</option>
+                            <option value="cuda">NVIDIA GPU (CUDA)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <button type="button" class="btn-primary btn-generate" id="generate-button">
+                            ✨ Generate Shorts
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- LIVE SSE PROGRESS CARD -->
+            <div class="progress-card hidden" id="progress-area">
+                <div class="progress-header">
+                    <div class="progress-title" id="progress-main-status">Creating your Shorts...</div>
+                    <button type="button" class="btn-danger" id="cancel-job-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <span>Cancel Generation</span>
+                    </button>
+                </div>
+
+                <div class="progress-steps-list">
+                    <div class="progress-step-item">
+                        <span>1. Video Source Preparation</span>
+                        <span class="step-status-tag" id="step-upload">Waiting</span>
+                    </div>
+                    <div class="progress-step-item">
+                        <span>2. Speech Transcription (Whisper)</span>
+                        <span class="step-status-tag" id="step-transcription">Waiting</span>
+                    </div>
+                    <div class="progress-step-item">
+                        <span>3. Finding Best Moments & Scoring</span>
+                        <span class="step-status-tag" id="step-selection">Waiting</span>
+                    </div>
+                    <div class="progress-step-item">
+                        <span>4. Re-framing & Rendering Captions</span>
+                        <span class="step-status-tag" id="step-rendering">Waiting</span>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- RESULTS SECTION -->
+            <div class="card hidden" id="results-area">
+                <div class="card-header">
+                    <div class="card-title">🎉 Your Generated Shorts</div>
+                </div>
+
+                <div class="results-grid" id="results-grid"></div>
+            </div>
+
+        </section>
+
+
+        <!-- ===================================================================
+             HISTORY PAGE
+             =================================================================== -->
+        <section id="history-page" class="page">
+            <div class="flex-between" style="margin-bottom:20px;">
+                <h2>Past Generations & Saved Clips</h2>
+                <button type="button" class="btn-secondary" id="refresh-history-btn">Refresh History</button>
+            </div>
+
+            <div class="results-grid" id="history-grid"></div>
+
+            <div class="empty-state-box hidden" id="history-empty">
+                <div class="empty-state-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                </div>
+                <h3>No History Found</h3>
+                <p>Your generated video clips will appear here once you create your first project.</p>
+            </div>
+        </section>
+
+
+        <!-- ===================================================================
+             SETTINGS PAGE
+             =================================================================== -->
+        <section id="settings-page" class="page">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Groq API Key Configuration</div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label for="groq-api-key-input">Groq API Key</label>
+                        <div style="display:flex; gap:10px;">
+                            <input type="password" id="groq-api-key-input" placeholder="gsk_...">
+                            <button type="button" class="btn-primary" id="save-groq-key-btn">Save Key</button>
+                        </div>
+                        <span class="help-text" id="groq-key-status-text">Checking status...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Caption Fonts Library</div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Upload Custom Font (.ttf / .otf)</label>
+                        <div style="display:flex; gap:10px;">
+                            <input type="file" id="font-file-input" accept=".ttf,.otf">
+                            <button type="button" class="btn-secondary" id="upload-font-btn">Upload Font</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Background Music Library</div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Upload Custom Audio Track (.mp3 / .wav / .m4a)</label>
+                        <div style="display:flex; gap:10px;">
+                            <input type="file" id="music-file-input" accept="audio/*">
+                            <button type="button" class="btn-secondary" id="upload-music-btn">Upload Music</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="app.js?v=5"></script>
+
+<!-- Floating Factory Dashboard link -->
+<style>
+    .factory-dashboard-btn:hover {
+        background-color: #2563eb !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6) !important;
+    }
+</style>
+<a href="/dashboard.html" class="factory-dashboard-btn" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #3b82f6; color: white; padding: 12px 20px; border-radius: 9999px; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); border: 1px solid rgba(255,255,255,0.1); transition: transform 0.2s, background-color 0.2s;">
+    <svg xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+    </svg>
+    <span>Factory Dashboard</span>
+</a>
+
+</body>
+</html>
