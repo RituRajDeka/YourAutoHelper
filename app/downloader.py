@@ -64,34 +64,38 @@ def _download_attempts(base_opts: dict) -> list[tuple[str, dict]]:
     """Ordered (label, ydl_opts) attempts.
 
     Order is cheapest-and-most-likely first:
-      1. explicit cookies (only if the user configured a file/browser),
-      2. the plain default pass (fast for public videos),
-      3. cookie-free alternate YouTube player clients (dodge the bot wall),
-      4. browser cookies (needs the browser closed on Windows) as a last resort.
+      1. default client (with cookies if configured)
+      2. alternative player clients (android, ios, tv, mweb) (with cookies if configured)
+      3. local browser cookies extract fallback
     """
     cookie_file = os.environ.get(_COOKIE_FILE_ENV)
     forced = os.environ.get(_COOKIE_BROWSER_ENV)
 
-    attempts: list[tuple[str, dict]] = []
+    run_opts = dict(base_opts)
     if cookie_file:
-        attempts.append(("cookies file", {**base_opts, "cookiefile": cookie_file}))
-    if forced:
-        b = forced.strip().lower()
-        attempts.append((f"{b} cookies", {**base_opts, "cookiesfrombrowser": (b,)}))
+        run_opts["cookiefile"] = cookie_file
 
-    attempts.append(("default", dict(base_opts)))
+    attempts: list[tuple[str, dict]] = []
+    
+    # Try standard client (with cookies if loaded)
+    attempts.append(("default", dict(run_opts)))
 
+    # Try client variations (with cookies if loaded)
     for client in _PLAYER_CLIENTS:
         attempts.append((
             f"{client} client",
-            {**base_opts, "extractor_args": {"youtube": {"player_client": [client]}}},
+            {**run_opts, "extractor_args": {"youtube": {"player_client": [client]}}},
         ))
 
-    if not forced:  # auto-try common browsers unless the user pinned one
+    if forced:
+        b = forced.strip().lower()
+        attempts.append((f"{b} cookies", {**base_opts, "cookiesfrombrowser": (b,)}))
+    elif not cookie_file:  # Only auto-try local browsers if no cookies file was loaded
         for b in _DEFAULT_BROWSERS:
             attempts.append((f"{b} cookies", {**base_opts, "cookiesfrombrowser": (b,)}))
 
     return attempts
+
 
 
 def _clean_ydl_error(raw: str) -> str:
