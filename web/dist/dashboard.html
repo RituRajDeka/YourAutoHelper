@@ -473,6 +473,9 @@
                 <div class="form-group">
                     <label for="github_workflow">GitHub Workflow</label>
                     <input type="text" id="github_workflow" value="render.yml" placeholder="e.g. render.yml">
+                    
+                    <label for="public_server_url">Public Server URL</label>
+                    <input type="text" id="public_server_url" placeholder="e.g. https://yourautohelper-production.up.railway.app">
                 </div>
             </div>
             <div style="border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
@@ -645,6 +648,7 @@
                 document.getElementById("github_repo").value = settings.github_repo || "";
                 document.getElementById("github_ref").value = settings.github_ref || "main";
                 document.getElementById("github_workflow").value = settings.github_workflow || "render.yml";
+                document.getElementById("public_server_url").value = settings.public_server_url || "";
                 document.getElementById("storage_provider").value = settings.storage_provider || "local";
                 document.getElementById("s3_bucket_name").value = settings.s3_bucket_name || "";
                 document.getElementById("s3_endpoint_url").value = settings.s3_endpoint_url || "";
@@ -776,6 +780,7 @@
             github_repo: document.getElementById("github_repo").value,
             github_ref: document.getElementById("github_ref").value,
             github_workflow: document.getElementById("github_workflow").value,
+            public_server_url: document.getElementById("public_server_url").value,
             storage_provider: document.getElementById("storage_provider").value,
             s3_bucket_name: document.getElementById("s3_bucket_name").value,
             s3_endpoint_url: document.getElementById("s3_endpoint_url").value,

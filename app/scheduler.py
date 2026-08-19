@@ -173,7 +173,7 @@ class SchedulerWorker:
                 update_job_status(job_id, 'FAILED', error="public_server_url not configured.")
                 return
                 
-            success = github_dispatch.dispatch_workflow(job_id, callback_token, server_url)
+            success, err_msg = github_dispatch.dispatch_workflow(job_id, callback_token, server_url)
             if success:
                 logger.info("Automatically enqueued and dispatched remote job %s for video ID %s", job_id, video_id)
                 # Register in-memory job placeholder for SSE /progress and /result
@@ -185,9 +185,10 @@ class SchedulerWorker:
                 with jobs._JOBS_LOCK:
                     jobs._JOBS[job_id] = job
             else:
-                logger.error("Failed to automatically dispatch remote job %s", job_id)
-                update_job_status(job_id, 'FAILED', error="GitHub Actions dispatch failed.")
+                logger.error("Failed to automatically dispatch remote job %s: %s", job_id, err_msg)
+                update_job_status(job_id, 'FAILED', error=f"GitHub Actions dispatch failed: {err_msg}")
             return
+
 
         # Local mode: Download video
         download_path = download_video_source(video_id)

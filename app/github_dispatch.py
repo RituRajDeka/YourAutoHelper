@@ -4,7 +4,7 @@ from typing import Optional
 
 logger = logging.getLogger("ai_video_clipper.github_dispatch")
 
-def dispatch_workflow(job_id: str, callback_token: str, server_url: str) -> bool:
+def dispatch_workflow(job_id: str, callback_token: str, server_url: str) -> tuple[bool, str]:
     """Dispatches a GitHub Actions workflow to run the hybrid rendering task.
     
     Reads settings from the database:
@@ -22,7 +22,7 @@ def dispatch_workflow(job_id: str, callback_token: str, server_url: str) -> bool
         server_url: The callback URL prefix of the server.
         
     Returns:
-        bool: True if the dispatch was successful (status 204), False otherwise.
+        tuple[bool, str]: (True, "") if the dispatch was successful (status 204), (False, error_msg) otherwise.
     """
     from .db import get_setting
 
@@ -32,11 +32,13 @@ def dispatch_workflow(job_id: str, callback_token: str, server_url: str) -> bool
     github_workflow = get_setting('github_workflow', 'render.yml')
 
     if not github_token:
-        logger.error("GitHub dispatch failed: 'github_token' setting is not configured.")
-        return False
+        err = "GitHub token setting is not configured."
+        logger.error(f"GitHub dispatch failed: {err}")
+        return False, err
     if not github_repo or '/' not in github_repo:
-        logger.error(f"GitHub dispatch failed: 'github_repo' setting is invalid or not configured: {github_repo}")
-        return False
+        err = f"GitHub repository setting is invalid or not configured: {github_repo}"
+        logger.error(f"GitHub dispatch failed: {err}")
+        return False, err
 
     url = f"https://api.github.com/repos/{github_repo}/actions/workflows/{github_workflow}/dispatches"
     
@@ -60,13 +62,16 @@ def dispatch_workflow(job_id: str, callback_token: str, server_url: str) -> bool
         response = requests.post(url, headers=headers, json=payload, timeout=15)
         if response.status_code == 204:
             logger.info(f"Successfully dispatched GHA workflow '{github_workflow}' for job {job_id}")
-            return True
+            return True, ""
         else:
+            err = f"Status {response.status_code}: {response.text or response.reason}"
             logger.error(
                 f"GitHub dispatch failed for job {job_id}. "
                 f"Status: {response.status_code}, Response: {response.text}"
             )
-            return False
+            return False, err
     except Exception as e:
-        logger.exception(f"Unexpected error when dispatching GHA workflow for job {job_id}: {e}")
-        return False
+        err = str(e)
+        logger.exception(f"Unexpected error when dispatching GHA workflow for job {job_id}: {err}")
+        return False, err
+
