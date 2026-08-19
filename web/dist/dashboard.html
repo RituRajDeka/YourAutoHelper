@@ -378,14 +378,26 @@
                             <span id="active-job-stage" style="font-weight:600; color:var(--warning-color);">IDLE</span>
                         </div>
                         <div style="margin-bottom: 8px;">
-                            <span style="font-weight:600; color:var(--text-secondary); display:block; margin-bottom: 5px;">Progress:</span>
+                            <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                                <span style="font-weight:600; color:var(--text-secondary);">Progress:</span>
+                                <span id="active-job-progress-percent" style="font-family:monospace; font-weight:600; color:var(--primary-color);">0%</span>
+                            </div>
                             <div class="progress-bar-wrapper" style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden; position: relative;">
                                 <div id="active-job-progress-bar" style="background: var(--primary-color); height: 100%; width: 0%; transition: width 0.3s;"></div>
                             </div>
                         </div>
-                        <div style="display:flex; justify-content:space-between;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 12px;">
                             <span style="font-weight:600; color:var(--text-secondary);">Last Upload:</span>
                             <span id="last-upload-info" style="color: var(--success-color);">—</span>
+                        </div>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                                <span style="font-weight:600; color:var(--text-secondary);">Server Disk Usage:</span>
+                                <span id="disk-usage-text" style="font-family:monospace; font-size:12px; font-weight:600;">—</span>
+                            </div>
+                            <div class="progress-bar-wrapper" style="background: rgba(255,255,255,0.05); height: 6px; border-radius: 3px; overflow: hidden; position: relative;">
+                                <div id="disk-usage-bar" style="background: var(--warning-color); height: 100%; width: 0%; transition: width 0.5s;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -966,6 +978,7 @@
                     
                     const progress = data.current_job_progress || 0;
                     document.getElementById("active-job-progress-bar").style.width = `${progress}%`;
+                    document.getElementById("active-job-progress-percent").innerText = `${progress}%`;
                     
                     if (data.last_published_title) {
                         document.getElementById("last-upload-info").innerHTML = `
@@ -976,6 +989,25 @@
                     } else {
                         document.getElementById("last-upload-info").innerText = "—";
                     }
+                    
+                    // Fetch live disk usage
+                    fetch("/api/storage/disk-usage")
+                        .then(res => res.json())
+                        .then(usage => {
+                            document.getElementById("disk-usage-text").innerText = `${usage.used_gb} GB / ${usage.total_gb} GB (${usage.used_percent}%)`;
+                            document.getElementById("disk-usage-bar").style.width = `${usage.used_percent}%`;
+                            
+                            // Change bar color dynamically based on usage
+                            const bar = document.getElementById("disk-usage-bar");
+                            if (usage.used_percent > 85) {
+                                bar.style.backgroundColor = "var(--danger-color)";
+                            } else if (usage.used_percent > 60) {
+                                bar.style.backgroundColor = "var(--warning-color)";
+                            } else {
+                                bar.style.backgroundColor = "var(--success-color)";
+                            }
+                        })
+                        .catch(err => console.error("Failed to fetch disk usage:", err));
                 })
                 .catch(err => console.error("Failed to fetch automation status:", err));
         }

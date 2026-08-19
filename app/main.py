@@ -342,9 +342,10 @@ def index() -> FileResponse:
     ``no-store`` keeps the browser from pinning a stale index that points at old,
     since-rebuilt asset hashes (the "old UI until hard refresh" bug).
     """
-    react_index = WEB_DIST_DIR / "index.html"
+    react_index = WEB_DIST_DIR / "dashboard.html"
     target = react_index if react_index.is_file() else (STATIC_DIR / "index.html")
     return FileResponse(str(target), headers={"Cache-Control": "no-store"})
+
 
 
 @app.post("/api/generate")
@@ -686,7 +687,67 @@ def update_settings(req: UpdateSettingsRequest) -> dict:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/automation/start")
+def start_automation(request: Request, background_tasks: BackgroundTasks) -> dict:
+    try:
+        db.set_setting("automation_status", "RUNNING")
+        worker = getattr(request.app.state, "scheduler_worker", None)
+        if worker:
+            background_tasks.add_task(worker.trigger_once)
+        return {"status": "success", "automation_status": "RUNNING"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/automation/cancel")
+def cancel_automation(request: Request) -> dict:
+    try:
+        db.set_setting("automation_status", "CANCELLED")
+        db.cancel_all_active_jobs()
+        return {"status": "success", "automation_status": "CANCELLED"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/automation/status")
+def get_automation_status(request: Request) -> dict:
+    try:
+        status = db.get_setting("automation_status", "IDLE")
+        last_job = db.get_last_job_info()
+        last_published = db.get_last_published_short()
+        
+        return {
+            "status": status,
+            "current_job_id": last_job.get("id") if last_job else None,
+            "current_job_status": last_job.get("status") if last_job else None,
+            "current_job_progress": last_job.get("progress", 0) if last_job else 0,
+            "current_job_error": last_job.get("error") if last_job else None,
+            "last_published_title": last_published.get("title") if last_published else None,
+            "last_published_time": last_published.get("created_at") if last_published else None,
+            "last_published_youtube_id": last_published.get("youtube_video_id") if last_published else None,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/storage/disk-usage")
+def get_disk_usage() -> dict:
+    try:
+        import shutil
+        total, used, free = shutil.disk_usage("/")
+        return {
+            "total_gb": round(total / (1024**3), 2),
+            "used_gb": round(used / (1024**3), 2),
+            "free_gb": round(free / (1024**3), 2),
+            "used_percent": round((used / total) * 100, 2)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/shorts")
+
+
 def get_shorts(status: Optional[str] = None) -> list:
     try:
         if status:
