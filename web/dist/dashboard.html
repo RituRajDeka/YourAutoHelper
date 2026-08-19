@@ -444,6 +444,9 @@
                 <div class="form-group">
                     <label for="youtube_client_secret">OAuth Client Secret</label>
                     <input type="password" id="youtube_client_secret" placeholder="Enters youtube_client_secret...">
+                    
+                    <label for="youtube_cookies">YouTube cookies.txt Contents (Optional)</label>
+                    <textarea id="youtube_cookies" placeholder="Paste your exported Netscape-format cookies.txt contents here..." style="width: 100%; height: 100px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); font-family: monospace; font-size: 11px; padding: 8px; resize: vertical; margin-top: 5px;"></textarea>
                 </div>
                 <button class="btn btn-secondary" id="link-youtube-btn">Link YouTube Account</button>
             </div>
@@ -641,6 +644,7 @@
                 document.getElementById("buffer_days").value = settings.buffer_days || 2;
                 document.getElementById("youtube_client_id").value = settings.youtube_client_id || "";
                 document.getElementById("youtube_client_secret").value = settings.youtube_client_secret || "";
+                document.getElementById("youtube_cookies").value = settings.youtube_cookies || "";
                 document.getElementById("transcribe_device").value = settings.transcribe_device || "cpu";
                 
                 document.getElementById("run_mode").value = settings.run_mode || "local";
@@ -774,6 +778,7 @@
             buffer_days: parseInt(document.getElementById("buffer_days").value),
             youtube_client_id: document.getElementById("youtube_client_id").value,
             youtube_client_secret: document.getElementById("youtube_client_secret").value,
+            youtube_cookies: document.getElementById("youtube_cookies").value,
             transcribe_device: document.getElementById("transcribe_device").value,
             run_mode: document.getElementById("run_mode").value,
             github_token: document.getElementById("github_token").value,

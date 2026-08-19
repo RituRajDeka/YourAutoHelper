@@ -89,6 +89,16 @@ def main():
             os.environ["GROQ_API_KEY"] = groq_api_key.strip()
             logger.info("GROQ_API_KEY set from configuration.")
 
+        youtube_cookies = config.get("youtube_cookies")
+        if youtube_cookies:
+            cookies_path = DOWNLOADS_DIR / "cookies.txt"
+            DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+            with open(cookies_path, "w", encoding="utf-8") as f:
+                f.write(youtube_cookies)
+            os.environ["CLIPFORGE_COOKIES_FILE"] = str(cookies_path)
+            logger.info("YouTube cookies saved and CLIPFORGE_COOKIES_FILE set.")
+
+
         # Sync S3 environment variables to database settings
         from app import db
         db.init_db()

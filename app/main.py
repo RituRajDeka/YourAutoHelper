@@ -549,6 +549,8 @@ class UpdateSettingsRequest(BaseModel):
     github_workflow: Optional[str] = None
     run_mode: Optional[str] = None
     public_server_url: Optional[str] = None
+    youtube_cookies: Optional[str] = None
+
 
 
 
@@ -636,8 +638,10 @@ def get_settings() -> dict:
             "github_ref": db.get_setting("github_ref") or "main",
             "github_workflow": db.get_setting("github_workflow") or "render.yml",
             "run_mode": db.get_setting("run_mode") or "local",
-            "public_server_url": db.get_setting("public_server_url") or ""
+            "public_server_url": db.get_setting("public_server_url") or "",
+            "youtube_cookies": db.get_setting("youtube_cookies") or ""
         }
+
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -688,10 +692,13 @@ def update_settings(req: UpdateSettingsRequest) -> dict:
             set_fn("run_mode", req.run_mode)
         if req.public_server_url is not None:
             set_fn("public_server_url", req.public_server_url)
+        if req.youtube_cookies is not None:
+            set_fn("youtube_cookies", req.youtube_cookies)
             
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
@@ -857,8 +864,10 @@ def get_job_config(
         "edit_plan": edit_plan,
         "source_video": source_video,
         "req": req_payload,
-        "request_payload": req_payload
+        "request_payload": req_payload,
+        "youtube_cookies": db.get_setting("youtube_cookies") or ""
     }
+
 
 
 @app.post("/api/jobs/{job_id}/callback")
