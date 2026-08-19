@@ -337,7 +337,62 @@
         </div>
     </header>
 
-    <!-- CONFIGURATION & SETTINGS -->
+    
+        <!-- AUTOMATION CONTROL CENTER -->
+        <section class="card" id="automation-card">
+            <div class="card-title">
+                <span>Automation Control Center</span>
+                <span class="badge" id="automation-badge">IDLE</span>
+            </div>
+            <div class="grid-2">
+                <div>
+                    <h3 style="font-size: 15px; margin-bottom: 15px; color: var(--text-secondary);">Automation Control</h3>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">
+                        Start the automated factory loop. It will check your monitored channels, compile clips via GitHub Actions, and schedule uploads automatically.
+                    </p>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" id="start-automation-btn" style="background-color: var(--success-color); display: flex; align-items: center; gap: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Generate Shorts</span>
+                        </button>
+                        <button class="btn btn-danger" id="cancel-automation-btn" style="display: none; align-items: center; gap: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                            <span>Cancel Automation</span>
+                        </button>
+                    </div>
+                </div>
+                <div style="border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
+                    <h3 style="font-size: 15px; margin-bottom: 15px; color: var(--text-secondary);">Active Pipeline Status</h3>
+                    <div class="job-status-summary" id="automation-details" style="padding: 15px; background: rgba(0,0,0,0.15); border-radius: 8px; font-size:13px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                            <span style="font-weight:600; color:var(--text-secondary);">Active Job ID:</span>
+                            <span id="active-job-id" style="font-family:monospace;">—</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                            <span style="font-weight:600; color:var(--text-secondary);">Current Stage:</span>
+                            <span id="active-job-stage" style="font-weight:600; color:var(--warning-color);">IDLE</span>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <span style="font-weight:600; color:var(--text-secondary); display:block; margin-bottom: 5px;">Progress:</span>
+                            <div class="progress-bar-wrapper" style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden; position: relative;">
+                                <div id="active-job-progress-bar" style="background: var(--primary-color); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="font-weight:600; color:var(--text-secondary);">Last Upload:</span>
+                            <span id="last-upload-info" style="color: var(--success-color);">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONFIGURATION & SETTINGS -->
     <section class="card">
         <div class="card-title">
             <span>Global Factory Settings</span>
@@ -876,6 +931,83 @@
         } else {
             loadDashboardData();
         }
+
+        // Automation status polling and events
+        function pollAutomationStatus() {
+            fetch("/api/automation/status")
+                .then(res => res.json())
+                .then(data => {
+                    const badge = document.getElementById("automation-badge");
+                    const startBtn = document.getElementById("start-automation-btn");
+                    const cancelBtn = document.getElementById("cancel-automation-btn");
+                    
+                    badge.innerText = data.status;
+                    badge.className = "badge";
+                    if (data.status === "RUNNING" || data.status === "PROCESSING" || data.status === "RENDERING" || data.status === "PUBLISHING") {
+                        badge.classList.add("badge-info");
+                        startBtn.style.display = "none";
+                        cancelBtn.style.display = "inline-flex";
+                    } else if (data.status === "WAITING") {
+                        badge.classList.add("badge-success");
+                        startBtn.style.display = "none";
+                        cancelBtn.style.display = "inline-flex";
+                    } else if (data.status === "FAILED") {
+                        badge.classList.add("badge-danger");
+                        startBtn.style.display = "inline-flex";
+                        cancelBtn.style.display = "none";
+                    } else {
+                        badge.classList.add("badge-warning");
+                        startBtn.style.display = "inline-flex";
+                        cancelBtn.style.display = "none";
+                    }
+                    
+                    document.getElementById("active-job-id").innerText = data.current_job_id || "—";
+                    document.getElementById("active-job-stage").innerText = (data.current_job_status || "IDLE").toUpperCase();
+                    
+                    const progress = data.current_job_progress || 0;
+                    document.getElementById("active-job-progress-bar").style.width = `${progress}%`;
+                    
+                    if (data.last_published_title) {
+                        document.getElementById("last-upload-info").innerHTML = `
+                            <a href="https://youtube.com/watch?v=${data.last_published_youtube_id}" target="_blank" style="color: var(--success-color); text-decoration: none;">
+                                ${data.last_published_title}
+                            </a>
+                        `;
+                    } else {
+                        document.getElementById("last-upload-info").innerText = "—";
+                    }
+                })
+                .catch(err => console.error("Failed to fetch automation status:", err));
+        }
+
+        document.getElementById("start-automation-btn").addEventListener("click", () => {
+            fetch("/api/automation/start", { method: "POST" })
+                .then(res => res.json())
+                .then(data => {
+                    showAlert("Automation started successfully!", "success");
+                    pollAutomationStatus();
+                })
+                .catch(err => {
+                    console.error(err);
+                    showAlert("Failed to start automation.", "danger");
+                });
+        });
+
+        document.getElementById("cancel-automation-btn").addEventListener("click", () => {
+            fetch("/api/automation/cancel", { method: "POST" })
+                .then(res => res.json())
+                .then(data => {
+                    showAlert("Automation cancelled.", "warning");
+                    pollAutomationStatus();
+                })
+                .catch(err => {
+                    console.error(err);
+                    showAlert("Failed to cancel automation.", "danger");
+                });
+        });
+
+        pollAutomationStatus();
+        setInterval(pollAutomationStatus, 5000);
     });
 </script>
 
