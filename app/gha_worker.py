@@ -91,12 +91,18 @@ def main():
 
         youtube_cookies = config.get("youtube_cookies")
         if youtube_cookies:
+            cookies_str = youtube_cookies.strip()
+            # Ensure the Netscape header line is present so yt-dlp doesn't throw a parsing error
+            if not cookies_str.startswith("# Netscape HTTP Cookie File") and not cookies_str.startswith("# HTTP Cookie File"):
+                cookies_str = "# Netscape HTTP Cookie File\n" + cookies_str
+                
             cookies_path = DOWNLOADS_DIR / "cookies.txt"
             DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
             with open(cookies_path, "w", encoding="utf-8") as f:
-                f.write(youtube_cookies)
+                f.write(cookies_str)
             os.environ["CLIPFORGE_COOKIES_FILE"] = str(cookies_path)
             logger.info("YouTube cookies saved and CLIPFORGE_COOKIES_FILE set.")
+
 
 
         # Sync S3 environment variables to database settings
