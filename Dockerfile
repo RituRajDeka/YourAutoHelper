@@ -5,8 +5,8 @@ COPY package*.json tsconfig.json vite.config.ts ./
 COPY web/ ./web/
 RUN npm ci && npm run build
 
-# Python runner stage
-FROM python:3.11-slim
+# Python runner stage (using bullseye to avoid libseccomp/apt host compatibility issues on Railway)
+FROM python:3.11-slim-bullseye
 WORKDIR /app
 
 # Install ffmpeg, curl, and system dependencies
