@@ -17,8 +17,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up FFmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Install FFmpeg
+        run: |
+          # Replace slow Azure mirrors with main Ubuntu mirrors to prevent hanging
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
         
       - name: Install Python deps
         run: pip3 install -r requirements.txt
