@@ -102,8 +102,11 @@ def init_db():
             if "duplicate column name" not in str(e).lower():
                 raise e
     
+    # Clean up corrupt channel/playlist IDs that got saved as videos in older versions
+    cursor.execute("DELETE FROM source_videos WHERE length(id) != 11")
     conn.commit()
     conn.close()
+
 
 # ----------------- Settings Helpers -----------------
 
@@ -516,5 +519,29 @@ def update_job_from_callback(
                 scheduled_publish_time=c_pub_time
             )
 
+def get_last_job_info() -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM jobs ORDER BY updated_at DESC LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_last_published_short() -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM generated_shorts WHERE status = 'published' ORDER BY created_at DESC LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def cancel_all_active_jobs() -> None:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE jobs SET status = 'CANCELLED' WHERE status IN ('PENDING', 'RUNNING', 'DOWNLOADING', 'ANALYZING', 'EDITING', 'RENDERING', 'SUBTITLING', 'QUALITY_CHECK', 'UPLOADING')")
+    conn.commit()
+    conn.close()
+
 # Initialize tables
 init_db()
+

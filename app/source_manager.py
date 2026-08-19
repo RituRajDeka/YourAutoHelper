@@ -25,8 +25,12 @@ def sync_channels(max_results: int = 5) -> int:
     
     for ch in channels:
         url = ch['url']
+        # Normalize channel URL to target the videos tab for flat extraction
+        if ('@' in url or '/channel/' in url or '/c/' in url) and not url.endswith('/videos'):
+            url = url.rstrip('/') + '/videos'
         name = ch['name'] or url
         logger.info("Polling channel %s...", name)
+
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
