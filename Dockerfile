@@ -1,12 +1,3 @@
-# Multi-stage build: builder stage for Node assets
-FROM node:20-alpine AS frontend-builder
-WORKDIR /build
-# Copy Node configuration files from the web/ directory to the build root
-COPY web/package*.json web/tsconfig.json web/vite.config.ts ./
-COPY web/ ./web/
-RUN npm ci && npm run build
-
-# Python runner stage (using bullseye to avoid libseccomp/apt host compatibility issues on Railway)
 FROM python:3.11-slim-bullseye
 WORKDIR /app
 
@@ -20,11 +11,9 @@ RUN apt-get update && apt-get install -y \
 COPY requirements-deploy.txt .
 RUN pip install --no-cache-dir -r requirements-deploy.txt
 
-# Copy built frontend assets from builder stage
-COPY --from=frontend-builder /build/web/dist ./web/dist
-
-# Copy backend app source code
+# Copy backend app source code and pre-compiled frontend assets
 COPY app/ ./app/
+COPY web/ ./web/
 
 # Create data directories
 RUN mkdir -p downloads clips outputs
