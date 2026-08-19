@@ -104,8 +104,11 @@ def init_db():
     
     # Clean up corrupt channel/playlist IDs that got saved as videos in older versions
     cursor.execute("DELETE FROM source_videos WHERE length(id) != 11")
+    # Reset failed source videos to new so the scheduler can automatically retry them
+    cursor.execute("UPDATE source_videos SET status = 'new' WHERE status = 'failed'")
     conn.commit()
     conn.close()
+
 
 
 # ----------------- Settings Helpers -----------------
