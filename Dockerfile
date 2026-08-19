@@ -1,11 +1,11 @@
-FROM python:3.11-slim-bullseye
+FROM python:3.11-alpine
 WORKDIR /app
 
-# Install ffmpeg, curl, and system dependencies (with --fix-missing to avoid temporary mirror glitches)
-RUN apt-get update --fix-missing && apt-get install -y --fix-missing \
+# Install ffmpeg, curl, and bash using Alpine's ultra-reliable package manager
+RUN apk add --no-cache \
     ffmpeg \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    bash
 
 # Copy python dependencies and install lightweight list
 COPY requirements-deploy.txt .
