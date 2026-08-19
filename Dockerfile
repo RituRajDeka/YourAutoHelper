@@ -1,7 +1,8 @@
 # Multi-stage build: builder stage for Node assets
 FROM node:20-alpine AS frontend-builder
 WORKDIR /build
-COPY package*.json tsconfig.json vite.config.ts ./
+# Copy Node configuration files from the web/ directory to the build root
+COPY web/package*.json web/tsconfig.json web/vite.config.ts ./
 COPY web/ ./web/
 RUN npm ci && npm run build
 
