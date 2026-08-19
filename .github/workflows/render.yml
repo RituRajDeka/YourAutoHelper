@@ -16,10 +16,13 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - name: Verify FFmpeg
-        run: ffmpeg -version
+      
+      - name: Set up FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        
       - name: Install Python deps
         run: pip3 install -r requirements.txt
+        
       - name: Run worker
         env:
           PYTHONPATH: ${{ github.workspace }}
