@@ -1,8 +1,8 @@
 FROM python:3.11-slim-bullseye
 WORKDIR /app
 
-# Install ffmpeg, curl, and system dependencies
-RUN apt-get update && apt-get install -y \
+# Install ffmpeg, curl, and system dependencies (with --fix-missing to avoid temporary mirror glitches)
+RUN apt-get update --fix-missing && apt-get install -y --fix-missing \
     ffmpeg \
     curl \
     && rm -rf /var/lib/apt/lists/*
