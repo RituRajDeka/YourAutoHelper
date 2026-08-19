@@ -43,28 +43,43 @@ class SchedulerWorker:
             self.running = False
             logger.info("Background scheduler worker stopping...")
 
+    def trigger_once(self):
+        try:
+            logger.info("Manually triggering scheduler iteration...")
+            sync_channels()
+            run_mode = get_setting('run_mode', 'local')
+            if run_mode == 'local':
+                job = get_next_pending_job()
+                if job:
+                    set_setting('automation_status', 'PROCESSING')
+                    self._process_job(job)
+                    return
+            set_setting('automation_status', 'WAITING')
+            self._check_and_enqueue_next()
+        except Exception as e:
+            logger.exception("Error in manually triggered scheduler: %s", e)
+
     def _loop(self):
         while self.running:
             try:
-                # 1) Sync channels to find new videos
-                sync_channels()
-                
-                # 2) Process next pending job if any (only in local mode!)
-                run_mode = get_setting('run_mode', 'local')
-                if run_mode == 'local':
-                    job = get_next_pending_job()
-                    if job:
-                        self._process_job(job)
-                        continue
-                    
-                # 3) Check if we need to schedule more shorts
-                self._check_and_enqueue_next()
-                
+                status = get_setting('automation_status', 'IDLE')
+                if status in ('RUNNING', 'PROCESSING', 'RENDERING', 'PUBLISHING', 'WAITING'):
+                    sync_channels()
+                    run_mode = get_setting('run_mode', 'local')
+                    if run_mode == 'local':
+                        job = get_next_pending_job()
+                        if job:
+                            set_setting('automation_status', 'PROCESSING')
+                            self._process_job(job)
+                            continue
+                    set_setting('automation_status', 'WAITING')
+                    self._check_and_enqueue_next()
             except Exception as e:
                 logger.exception("Error in scheduler loop: %s", e)
-                
-            # Sleep 60 seconds between checks
+                set_setting('automation_status', 'FAILED')
             time.sleep(60)
+
+    def _check_and_enqueue_next(self):
 
         try:
             shorts_per_day = int(get_setting('shorts_per_day', 3))
