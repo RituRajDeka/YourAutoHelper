@@ -396,6 +396,7 @@
                     <select id="downloader_mode">
                         <option value="yt-dlp">yt-dlp (Direct Download)</option>
                         <option value="invidious">Invidious Proxy (Bypass Bot Check)</option>
+                        <option value="local_agent">Local WSL Agent</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -447,6 +448,39 @@
                 <div class="form-group">
                     <label for="s3_public_url_prefix">S3 Public URL Prefix</label>
                     <input type="text" id="s3_public_url_prefix" placeholder="https://prefix.com/...">
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+            <h3 style="font-size: 15px; margin-bottom: 15px; color: var(--text-secondary);">Storage Allocation & Quota</h3>
+            <div class="grid-2">
+                <div>
+                    <div class="form-group">
+                        <label for="video_storage_limit">Allocated Downloader Space (GB)</label>
+                        <input type="number" id="video_storage_limit" min="1" placeholder="15">
+                    </div>
+                </div>
+                <div style="border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
+                    <div class="quota-visualizer" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                                <span style="color: var(--text-secondary);">Downloader Cache Used</span>
+                                <span id="quota-used-text" style="font-weight: 500;">0.00 GB</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden;">
+                                <div id="quota-used-bar" style="width: 0%; height: 100%; background-color: var(--warning-color); transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                                <span style="color: var(--text-secondary);">Available Space</span>
+                                <span id="quota-available-text" style="font-weight: 500;">0.00 GB</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden;">
+                                <div id="quota-available-bar" style="width: 0%; height: 100%; background-color: var(--success-color); transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -568,6 +602,21 @@
         return `<span class="badge">${status}</span>`;
     }
 
+    // Storage quota helper variables & function
+    let lastFetchedUsedGb = 0.0;
+
+    function updateQuotaUI(usedGb, limitGb) {
+        const availableGb = Math.max(0, limitGb - usedGb);
+        const usedPercent = limitGb > 0 ? Math.min(100, Math.max(0, (usedGb / limitGb) * 100)) : 0;
+        const availablePercent = limitGb > 0 ? Math.min(100, Math.max(0, (availableGb / limitGb) * 100)) : 0;
+
+        document.getElementById("quota-used-text").innerText = `${usedGb.toFixed(2)} GB / ${limitGb.toFixed(2)} GB`;
+        document.getElementById("quota-used-bar").style.width = `${usedPercent}%`;
+        
+        document.getElementById("quota-available-text").innerText = `${availableGb.toFixed(2)} GB / ${limitGb.toFixed(2)} GB`;
+        document.getElementById("quota-available-bar").style.width = `${availablePercent}%`;
+    }
+
     // Load entire dashboard data
     function loadDashboardData() {
         // 1. Fetch settings
@@ -593,6 +642,7 @@
                 document.getElementById("s3_secret_key").value = settings.s3_secret_key || "";
                 document.getElementById("s3_region").value = settings.s3_region || "";
                 document.getElementById("s3_public_url_prefix").value = settings.s3_public_url_prefix || "";
+                document.getElementById("video_storage_limit").value = settings.video_storage_limit !== undefined ? settings.video_storage_limit : 15;
 
                 const dot = document.getElementById("yt-status-dot");
                 const text = document.getElementById("yt-status-text");
@@ -702,6 +752,18 @@
                 console.error("Error loading shorts:", err);
                 document.getElementById("shorts-list").innerHTML = `<tr><td colspan="5" class="empty-state">Failed to load shorts registry.</td></tr>`;
             });
+
+        // 5. Fetch storage quota
+        fetch("/api/storage/quota")
+            .then(res => res.json())
+            .then(data => {
+                lastFetchedUsedGb = data.used_gb;
+                const inputLimit = parseFloat(document.getElementById("video_storage_limit").value) || data.limit_gb;
+                updateQuotaUI(lastFetchedUsedGb, inputLimit);
+            })
+            .catch(err => {
+                console.error("Error loading storage quota:", err);
+            });
     }
 
     // Save Settings
@@ -724,7 +786,8 @@
             s3_access_key: document.getElementById("s3_access_key").value,
             s3_secret_key: document.getElementById("s3_secret_key").value,
             s3_region: document.getElementById("s3_region").value,
-            s3_public_url_prefix: document.getElementById("s3_public_url_prefix").value
+            s3_public_url_prefix: document.getElementById("s3_public_url_prefix").value,
+            video_storage_limit: parseInt(document.getElementById("video_storage_limit").value) || 15
         };
 
         fetch("/api/settings", {
@@ -860,6 +923,11 @@
 
     // Initial check for OAuth return code
     window.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("video_storage_limit").addEventListener("input", (e) => {
+            const inputLimit = parseFloat(e.target.value) || 15.0;
+            updateQuotaUI(lastFetchedUsedGb, inputLimit);
+        });
+
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get("code");
         if (code) {

@@ -83,7 +83,8 @@ class TestMainRoutes(unittest.TestCase):
                 "youtube_client_id": "client123",
                 "youtube_client_secret": "secret123",
                 "transcribe_device": "cuda",
-                "youtube_oauth_token": "token_val"
+                "youtube_oauth_token": "token_val",
+                "video_storage_limit": "20"
             }
             return settings.get(key)
         mock_get_setting.side_effect = side_effect
@@ -97,14 +98,43 @@ class TestMainRoutes(unittest.TestCase):
         self.assertEqual(data["youtube_client_secret"], "secret123")
         self.assertEqual(data["transcribe_device"], "cuda")
         self.assertEqual(data["youtube_linked"], True)
+        self.assertEqual(data["video_storage_limit"], 20)
 
     @patch('app.db.set_setting')
     def test_post_settings(self, mock_set_setting):
         """POST /api/settings -> accepts parameters and returns status success."""
-        response = self.client.post("/api/settings", json={"shorts_per_day": 5})
+        response = self.client.post("/api/settings", json={"shorts_per_day": 5, "video_storage_limit": 20})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "success"})
-        mock_set_setting.assert_called_once_with("shorts_per_day", 5)
+        mock_set_setting.assert_any_call("shorts_per_day", 5)
+        mock_set_setting.assert_any_call("video_storage_limit", 20)
+
+    @patch('app.db.get_setting')
+    @patch('pathlib.Path.exists')
+    @patch('pathlib.Path.glob')
+    def test_get_storage_quota(self, mock_glob, mock_exists, mock_get_setting):
+        """GET /api/storage/quota -> returns quota stats."""
+        mock_get_setting.return_value = "25"
+        mock_exists.return_value = True
+        
+        # Mock file sizes
+        mock_file1 = MagicMock()
+        mock_file1.is_file.return_value = True
+        mock_file1.stat.return_value.st_size = 5 * 1024**3  # 5 GB
+        
+        mock_file2 = MagicMock()
+        mock_file2.is_file.return_value = True
+        mock_file2.stat.return_value.st_size = 3 * 1024**3  # 3 GB
+        
+        mock_glob.return_value = [mock_file1, mock_file2]
+        
+        response = self.client.get("/api/storage/quota")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["limit_gb"], 25.0)
+        self.assertEqual(data["used_gb"], 8.0)
+        self.assertEqual(data["available_gb"], 17.0)
+        self.assertEqual(data["used_percent"], 32.0)
 
     @patch('app.main.query_recent_shorts')
     def test_get_shorts(self, mock_query_shorts):
