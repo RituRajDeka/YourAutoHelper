@@ -335,15 +335,18 @@ def reveal_clip(ref: ClipRef) -> dict:
 
 @app.get("/")
 def index() -> FileResponse:
-    """Serve the frontend.
-
-    Prefer the built React dashboard (web/dist) so the backend and the dev server
-    show the SAME app; fall back to the legacy vanilla page only if no build exists.
-    ``no-store`` keeps the browser from pinning a stale index that points at old,
-    since-rebuilt asset hashes (the "old UI until hard refresh" bug).
-    """
-    react_index = WEB_DIST_DIR / "dashboard.html"
+    """Serve the main Clipper frontend."""
+    react_index = WEB_DIST_DIR / "index.html"
     target = react_index if react_index.is_file() else (STATIC_DIR / "index.html")
+    return FileResponse(str(target), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/dashboard")
+@app.get("/dashboard.html")
+def dashboard() -> FileResponse:
+    """Serve the Automation Factory Dashboard."""
+    react_dashboard = WEB_DIST_DIR / "dashboard.html"
+    target = react_dashboard if react_dashboard.is_file() else (STATIC_DIR / "dashboard.html")
     return FileResponse(str(target), headers={"Cache-Control": "no-store"})
 
 
@@ -909,7 +912,8 @@ def get_job_config(
         "req": req_payload,
         "request_payload": req_payload,
         "youtube_cookies": db.get_setting("youtube_cookies") or "",
-        "downloader_mode": db.get_setting("downloader_mode") or "yt-dlp"
+        "downloader_mode": db.get_setting("downloader_mode") or "yt-dlp",
+        "s3_url": job_row.get("s3_url")
     }
 
 
