@@ -32,6 +32,28 @@ jobs:
       - name: Install Python deps
         run: pip3 install --upgrade -r requirements.txt
 
+      - name: Run client compatibility test
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          # Fetch the config first so the cookies file is generated for testing
+          python3 -c "
+          import requests, os
+          from pathlib import Path
+          resp = requests.get('${{ inputs.server_url }}/api/jobs/${{ inputs.job_id }}/config', headers={'Authorization': 'Bearer ${{ inputs.callback_token }}'})
+          resp.raise_for_status()
+          config = resp.json()
+          cookies = config.get('youtube_cookies', '')
+          if cookies:
+              Path('downloads').mkdir(exist_ok=True)
+              cookies_str = cookies.strip()
+              if not cookies_str.startswith('# Netscape HTTP Cookie File') and not cookies_str.startswith('# HTTP Cookie File'):
+                  cookies_str = '# Netscape HTTP Cookie File\n' + cookies_str
+              with open('downloads/cookies.txt', 'w') as f:
+                  f.write(cookies_str)
+          "
+          python3 app/test_downloader.py
+        
       - name: Run worker
         env:
           PYTHONPATH: ${{ github.workspace }}
