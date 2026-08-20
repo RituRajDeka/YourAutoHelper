@@ -324,6 +324,26 @@ def _download_via_invidious_fallback(url: str, output_path: Path) -> bool:
     return False
 
 
+def _check_invidious_metadata_error(video_id: str, domains: list[str]) -> Optional[str]:
+    """Query the Invidious video metadata API to see if the video is copyright-blocked or unavailable."""
+    import requests
+    for domain in domains[:3]:
+        api_url = f"https://{domain}/api/v1/videos/{video_id}"
+        try:
+            resp = requests.get(api_url, timeout=5)
+            if resp.status_code == 200:
+                # Video exists and is accessible
+                return None
+            elif resp.status_code in (404, 400, 500):
+                data = resp.json()
+                error_msg = data.get("error", "")
+                if error_msg:
+                    return error_msg
+        except Exception:
+            pass
+    return None
+
+
 def download_video(
     url: str, progress_hook: Optional[Callable[[dict], None]] = None
 ) -> Path:
@@ -414,7 +434,29 @@ def download_video(
     if not ok:
         logger.info("All yt-dlp download strategies failed. Invoking Invidious public proxy fallback...")
         try:
+            video_id = _extract_video_id(url)
             ok = _download_via_invidious_fallback(url, expected_path)
+            if not ok and video_id:
+                # Resolve the exact block error (e.g. copyright/deleted) from Invidious API
+                import requests
+                domains = []
+                try:
+                    resp = requests.get("https://api.invidious.io/instances.json", timeout=5)
+                    if resp.status_code == 200:
+                        for item in resp.json():
+                            monitor = item[1].get("monitor")
+                            if monitor and not monitor.get("down") and monitor.get("last_status") == 200:
+                                if item[1].get("type") == "https":
+                                    domains.append(item[0])
+                except Exception:
+                    pass
+                
+                if domains:
+                    meta_err = _check_invidious_metadata_error(video_id, domains)
+                    if meta_err:
+                        raise YouTubeDownloadError("VIDEO_NOT_FOUND", meta_err)
+        except YouTubeDownloadError:
+            raise
         except Exception as inv_err:
             logger.exception("Invidious fallback raised an unexpected error: %s", inv_err)
             ok = False
