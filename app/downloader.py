@@ -139,13 +139,10 @@ def download_video(
     expected_path = DOWNLOADS_DIR / f"{clip_uuid}.mp4"
 
     base_opts = {
-        # Prefer the best stream up to 1080p (plenty for shorts, avoids slow 4K
-        # downloads). Container is normalised to mp4 by merge_output_format, so
-        # we don't restrict by extension - that was too strict and could fall
-        # back to a tiny stream when no progressive mp4 existed.
-        "format": (
-            "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"
-        ),
+        # Prefer best video+audio streams up to 1080p, falling back to progressive or best stream.
+        # Uses wildcard selectors (bv*, ba, b) so yt-dlp can match progressive streams (e.g. format 18)
+        # when YouTube hides separate DASH video streams on server IPs.
+        "format": "bv*[height<=1080]+ba/b[height<=1080]/b",
         "merge_output_format": "mp4",
         "outtmpl": out_template,
         "noplaylist": True,
