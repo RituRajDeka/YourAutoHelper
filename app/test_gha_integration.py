@@ -252,7 +252,7 @@ class TestGHAIntegration(unittest.TestCase):
     @patch('app.github_dispatch.dispatch_workflow')
     def test_remote_generation_dispatch(self, mock_dispatch):
         """POST /api/generate triggers GHA workflow dispatch and creates pending job in DB."""
-        mock_dispatch.return_value = True
+        mock_dispatch.return_value = (True, "")
         
         # Configure integration settings
         db.set_setting("run_mode", "remote")
