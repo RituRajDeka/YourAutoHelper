@@ -11,6 +11,7 @@ import logging
 import os
 import re
 import uuid
+import random
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -246,6 +247,83 @@ def classify_error(err_str: str, auth_diag: dict) -> tuple[str, str]:
     return "UNKNOWN_DOWNLOAD_ERROR", clean_msg
 
 
+def _extract_video_id(url: str) -> Optional[str]:
+    import re
+    # Match standard youtube watch URL, shorts, embeds, and sharing youtu.be link
+    match = re.search(r'(?:v=|\/shorts\/|\/embed\/|\/v\/|youtu\.be\/|\/watch\?v=|&v=)([^#\&\?]{11})', url)
+    if match:
+        return match.group(1)
+    return None
+
+
+def _download_via_invidious_fallback(url: str, output_path: Path) -> bool:
+    video_id = _extract_video_id(url)
+    if not video_id:
+        logger.warning("Could not extract YouTube video ID from URL: %s", url)
+        return False
+        
+    logger.info("Initiating Invidious public instance fallback download for ID: %s...", video_id)
+    try:
+        import requests
+        
+        resp = requests.get("https://api.invidious.io/instances.json", timeout=10)
+        resp.raise_for_status()
+        instances_data = resp.json()
+    except Exception as e:
+        logger.warning("Failed to fetch Invidious instances for fallback: %s", e)
+        return False
+
+    candidates = []
+    for item in instances_data:
+        domain = item[0]
+        meta = item[1]
+        
+        monitor = meta.get("monitor")
+        if monitor and not monitor.get("down") and monitor.get("last_status") == 200:
+            if meta.get("type") == "https":
+                candidates.append(domain)
+    
+    # Shuffle to distribute load
+    random.shuffle(candidates)
+    
+    # Try the top 8 candidates
+    for domain in candidates[:8]:
+        for itag in [22, 18]:
+            download_url = f"https://{domain}/latest_version?id={video_id}&itag={itag}&local=true"
+            logger.info("Trying Invidious download via %s (itag %d)...", domain, itag)
+            
+            try:
+                with requests.get(download_url, stream=True, timeout=20) as r:
+                    if r.status_code == 200:
+                        content_type = r.headers.get("Content-Type", "").lower()
+                        # Validate it is actually a video stream, not an HTML error/captcha page
+                        if not any(k in content_type for k in ("video", "octet-stream")):
+                            logger.warning("Skipping %s: invalid Content-Type '%s'", domain, content_type)
+                            continue
+                            
+                        # Double check content size if reported
+                        content_len = int(r.headers.get("Content-Length", 0))
+                        if content_len > 0 and content_len < 100 * 1024:
+                            logger.warning("Skipping %s: Content-Length too small (%d bytes)", domain, content_len)
+                            continue
+                            
+                        output_path.parent.mkdir(parents=True, exist_ok=True)
+                        with open(output_path, "wb") as f:
+                            for chunk in r.iter_content(chunk_size=16384):
+                                if chunk:
+                                    f.write(chunk)
+                                    
+                        # Verify downloaded file size is reasonable
+                        if output_path.exists() and output_path.stat().st_size >= 100 * 1024:
+                            logger.info("Successfully downloaded %s via Invidious proxy %s", url, domain)
+                            return True
+            except Exception as e:
+                logger.warning("Download attempt failed on %s (itag %d): %s", domain, itag, e)
+                
+    logger.error("All Invidious instance fallback download attempts failed.")
+    return False
+
+
 def download_video(
     url: str, progress_hook: Optional[Callable[[dict], None]] = None
 ) -> Path:
@@ -332,6 +410,14 @@ def download_video(
                 
         if ok:
             break
+
+    if not ok:
+        logger.info("All yt-dlp download strategies failed. Invoking Invidious public proxy fallback...")
+        try:
+            ok = _download_via_invidious_fallback(url, expected_path)
+        except Exception as inv_err:
+            logger.exception("Invidious fallback raised an unexpected error: %s", inv_err)
+            ok = False
 
     if not ok:
         err_code, clean_msg = classify_error(last_reason, auth_diag)
