@@ -144,30 +144,61 @@ class AuthenticationProvider:
 
     def get_download_strategies(self, base_opts: dict) -> list[tuple[str, dict]]:
         """Generate different player client and cookie options attempts."""
-        run_opts = dict(base_opts)
-        if self.cookie_file and Path(self.cookie_file).exists():
-            run_opts["cookiefile"] = self.cookie_file
-
         strategies: list[tuple[str, dict]] = []
         
-        # 1. Try standard client (with cookies if loaded)
-        strategies.append(("default", dict(run_opts)))
+        # Determine if we have a cookie file
+        has_cookies = self.cookie_file and Path(self.cookie_file).exists()
 
-        # 2. Try client variations (with cookies if loaded)
+        # A. STRATEGY GROUP 1: Authenticated (using cookie file if available)
+        if has_cookies:
+            run_opts = {**base_opts, "cookiefile": self.cookie_file}
+            
+            # 1. Default client with cookies
+            strategies.append(("default (with cookies)", dict(run_opts)))
+
+            # 2. Player client variations with cookies
+            player_clients = ["android", "ios", "tv", "mweb"]
+            for client in player_clients:
+                strategies.append((
+                    f"{client} client (with cookies)",
+                    {
+                        **run_opts,
+                        "extractor_args": {
+                            **run_opts.get("extractor_args", {}),
+                            "youtube": {"player_client": [client]}
+                        }
+                    },
+                ))
+
+        # B. STRATEGY GROUP 2: Unauthenticated (clean guest player with PO Token provider)
+        # This is extremely resilient if cookies are mismatching or blocked
+        clean_opts = dict(base_opts)
+        
+        # 3. Default client unauthenticated
+        strategies.append(("default (unauthenticated)", dict(clean_opts)))
+
+        # 4. Player client variations unauthenticated
         player_clients = ["android", "ios", "tv", "mweb"]
         for client in player_clients:
             strategies.append((
-                f"{client} client",
-                {**run_opts, "extractor_args": {"youtube": {"player_client": [client]}}},
+                f"{client} client (unauthenticated)",
+                {
+                    **clean_opts,
+                    "extractor_args": {
+                        **clean_opts.get("extractor_args", {}),
+                        "youtube": {"player_client": [client]}
+                    }
+                },
             ))
 
-        # 3. Try browser cookies fallback
-        if self.forced_browser:
-            b = self.forced_browser.strip().lower()
-            strategies.append((f"{b} cookies", {**base_opts, "cookiesfrombrowser": (b,)}))
-        elif not self.cookie_file:  # Only auto-try local browsers if no cookies file was loaded
-            for b in _DEFAULT_BROWSERS:
+        # C. STRATEGY GROUP 3: Local browser cookies fallback (only if no cookies file was loaded)
+        if not has_cookies:
+            if self.forced_browser:
+                b = self.forced_browser.strip().lower()
                 strategies.append((f"{b} cookies", {**base_opts, "cookiesfrombrowser": (b,)}))
+            else:
+                for b in _DEFAULT_BROWSERS:
+                    strategies.append((f"{b} cookies", {**base_opts, "cookiesfrombrowser": (b,)}))
 
         return strategies
 
