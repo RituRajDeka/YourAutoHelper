@@ -7,3 +7,4 @@ faster-whisper
 requests
 indic-transliteration
 groq
+bgutil-ytdlp-pot-provider

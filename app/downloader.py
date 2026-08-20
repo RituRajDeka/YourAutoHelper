@@ -67,6 +67,15 @@ class DownloadConfiguration:
         }
         if self.progress_hook is not None:
             opts["progress_hooks"] = [self.progress_hook]
+            
+        # Configure PO Token Provider dynamically when running inside GitHub Actions
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            opts["extractor_args"] = {
+                "youtubepot-bgutilhttp": {
+                    "base_url": "http://127.0.0.1:4416"
+                }
+            }
+            
         return opts
 
 
@@ -188,14 +197,14 @@ def classify_error(err_str: str, auth_diag: dict) -> tuple[str, str]:
         return "PRIVATE_VIDEO", clean_msg
     if "does not exist" in err_lower or "not found" in err_lower or "unavailable" in err_lower or "been removed" in err_lower:
         return "VIDEO_NOT_FOUND", clean_msg
-    if "sign in" in err_lower or "log in" in err_lower or "login" in err_lower or "members-only" in err_lower or "age" in err_lower:
+    if "confirm you're not a bot" in err_lower or "bot" in err_lower or "page needs to be reloaded" in err_lower:
+        return "BOT_CHECK", f"YouTube blocked this download with a bot verification check: {clean_msg}"
+    if "sign in" in err_lower or "log in" in err_lower or "login" in err_lower or "members-only" in err_lower or "confirm your age" in err_lower or "age-gated" in err_lower:
         if auth_diag.get("exists") == "no":
             return "COOKIES_MISSING", f"Authentication required but cookies file was not found. Details: {clean_msg}"
         if auth_diag.get("format_valid") == "fail":
             return "COOKIES_INVALID", f"Authentication required but cookie file is malformed or invalid. Details: {clean_msg}"
         return "AUTHENTICATION_REQUIRED", f"Authentication required. Cookies are configured but rejected by YouTube. Details: {clean_msg}"
-    if "confirm you're not a bot" in err_lower or "bot" in err_lower or "page needs to be reloaded" in err_lower:
-        return "BOT_CHECK", f"YouTube blocked this download with a bot verification check: {clean_msg}"
     if "format" in err_lower or "requested format" in err_lower:
         return "FORMAT_ERROR", clean_msg
     if "http error" in err_lower or "403" in err_lower or "401" in err_lower:
