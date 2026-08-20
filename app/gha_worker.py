@@ -128,7 +128,42 @@ def main():
         # Step 2: Download Step
         report_progress("downloading", 10.0, "Starting download...")
         source_id = req.upload_id or req.download_id
-        if source_id:
+        s3_url = config.get("s3_url")
+        if s3_url:
+            logger.info("Downloading source file from S3: %s", s3_url)
+            DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+            import re
+            match = re.search(r'([A-Za-z0-9_-]{11})\.mp4$', s3_url)
+            video_id = match.group(1) if match else "source_video"
+            source_path = DOWNLOADS_DIR / f"{video_id}.mp4"
+            
+            import boto3
+            from botocore.client import Config
+            s3_settings = config.get("s3_settings", {})
+            bucket_name = s3_settings.get("s3_bucket_name")
+            
+            if "sources/" in s3_url:
+                s3_key = "sources/" + s3_url.split("sources/")[1]
+            else:
+                s3_key = f"sources/{video_id}.mp4"
+                
+            s3_client_kwargs = {}
+            if s3_settings.get("s3_access_key"):
+                s3_client_kwargs['aws_access_key_id'] = s3_settings["s3_access_key"]
+            if s3_settings.get("s3_secret_key"):
+                s3_client_kwargs['aws_secret_access_key'] = s3_settings["s3_secret_key"]
+            if s3_settings.get("s3_endpoint_url"):
+                s3_client_kwargs['endpoint_url'] = s3_settings["s3_endpoint_url"]
+            if s3_settings.get("s3_region"):
+                s3_client_kwargs['region_name'] = s3_settings["s3_region"]
+            if s3_settings.get("s3_endpoint_url"):
+                s3_client_kwargs['config'] = Config(signature_version='s3v4')
+                
+            logger.info("Downloading from S3 Bucket: %s, Key: %s", bucket_name, s3_key)
+            s3_client = boto3.client('s3', **s3_client_kwargs)
+            s3_client.download_file(bucket_name, s3_key, str(source_path))
+            logger.info("Source file downloaded successfully from S3: %s", source_path)
+        elif source_id:
             logger.info("Downloading source file from server for id: %s", source_id)
             DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
             source_path = DOWNLOADS_DIR / f"{source_id}.mp4"

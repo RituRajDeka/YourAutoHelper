@@ -551,6 +551,7 @@ class UpdateSettingsRequest(BaseModel):
     downloader_mode: Optional[str] = None
     public_server_url: Optional[str] = None
     youtube_cookies: Optional[str] = None
+    video_storage_limit: Optional[int] = None
 
 
 
@@ -641,7 +642,8 @@ def get_settings() -> dict:
             "run_mode": db.get_setting("run_mode") or "local",
             "downloader_mode": db.get_setting("downloader_mode") or "yt-dlp",
             "public_server_url": db.get_setting("public_server_url") or "",
-            "youtube_cookies": db.get_setting("youtube_cookies") or ""
+            "youtube_cookies": db.get_setting("youtube_cookies") or "",
+            "video_storage_limit": int(db.get_setting("video_storage_limit") or 15)
         }
 
 
@@ -698,6 +700,8 @@ def update_settings(req: UpdateSettingsRequest) -> dict:
             set_fn("public_server_url", req.public_server_url)
         if req.youtube_cookies is not None:
             set_fn("youtube_cookies", req.youtube_cookies)
+        if req.video_storage_limit is not None:
+            set_fn("video_storage_limit", req.video_storage_limit)
             
         return {"status": "success"}
     except Exception as e:
@@ -759,6 +763,41 @@ def get_disk_usage() -> dict:
             "used_gb": round(used / (1024**3), 2),
             "free_gb": round(free / (1024**3), 2),
             "used_percent": round((used / total) * 100, 2)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/storage/quota")
+def get_storage_quota() -> dict:
+    try:
+        from .paths import DOWNLOADS_DIR
+        used_bytes = 0
+        if DOWNLOADS_DIR.exists():
+            for f in DOWNLOADS_DIR.glob("**/*"):
+                if f.is_file():
+                    try:
+                        used_bytes += f.stat().st_size
+                    except OSError:
+                        pass
+        
+        used_gb = round(used_bytes / (1024**3), 2)
+        
+        limit_val = db.get_setting("video_storage_limit")
+        try:
+            limit_gb = float(limit_val) if limit_val is not None else 15.0
+        except (ValueError, TypeError):
+            limit_gb = 15.0
+            
+        available_gb = max(0.0, round(limit_gb - used_gb, 2))
+        used_percent = round((used_gb / limit_gb) * 100, 2) if limit_gb > 0 else 0.0
+        
+        return {
+            "used_bytes": used_bytes,
+            "used_gb": used_gb,
+            "limit_gb": limit_gb,
+            "available_gb": available_gb,
+            "used_percent": used_percent
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

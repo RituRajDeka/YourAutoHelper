@@ -135,6 +135,7 @@ class SchedulerWorker:
         
         # Check run mode
         run_mode = get_setting('run_mode', 'local')
+        downloader_mode = get_setting('downloader_mode', 'yt-dlp')
         if run_mode == 'remote':
             import secrets
             import uuid
@@ -157,14 +158,28 @@ class SchedulerWorker:
             )
             req_json = req.model_dump_json()
             
+            initial_status = 'DOWNLOAD_QUEUED' if downloader_mode == 'local_agent' else 'PENDING'
+            
             # Add to jobs table
             add_job(
                 job_id=job_id,
                 source_video_id=video_id,
-                status='PENDING',
+                status=initial_status,
                 request_json=req_json,
                 callback_token=callback_token
             )
+            
+            if downloader_mode == 'local_agent':
+                logger.info("Automatically enqueued local agent job %s for video ID %s. Waiting for local downloader...", job_id, video_id)
+                # Register in-memory job placeholder for SSE /progress
+                job = jobs.Job(req)
+                job.id = job_id
+                job.status = "queued"
+                job.stage = "queued"
+                job.message = "Job enqueued for local downloader."
+                with jobs._JOBS_LOCK:
+                    jobs._JOBS[job_id] = job
+                return
             
             # Get server_url
             server_url = get_setting("public_server_url")
