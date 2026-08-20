@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Shorts Factory Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #151d30;
+            --border-color: #222f4c;
+            --text-primary: #f8fafc;
+            --text-secondary: #8e9ebb;
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            padding: 40px 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-link:hover {
+            color: var(--primary-hover);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 10px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media(min-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .form-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        input, select {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            width: 100%;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+        }
+
+        .btn-danger:hover {
+            background-color: var(--danger-hover);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--success-color);
+        }
+
+        .badge-danger {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--danger-color);
+        }
+
+        .badge-warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--warning-color);
+        }
+
+        .badge-info {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: var(--primary-color);
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            background-color: rgba(0, 0, 0, 0.15);
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .alert-area {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+
+        .alert {
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            animation: slideIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .alert-success {
+            background-color: var(--card-bg);
+            border-left: 4px solid var(--success-color);
+            color: var(--text-primary);
+        }
+
+        .alert-danger {
+            background-color: var(--card-bg);
+            border-left: 4px solid var(--danger-color);
+            color: var(--text-primary);
+        }
+
+        .status-badge-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--danger-color);
+        }
+
+        .status-dot.active {
+            background-color: var(--success-color);
+            box-shadow: 0 0 8px var(--success-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+            font-style: italic;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="alert-area" id="alert-area"></div>
+
+<div class="container">
+    
+    <!-- HEADER -->
+    <header>
+        <div>
+            <h1>YouTube Shorts Factory</h1>
+            <p style="color: var(--text-secondary); font-size: 14px;">Automated scraping, generation, and scheduled uploads of short video content.</p>
+        </div>
+        <div class="header-actions">
+            <a href="/" class="btn-link">
+                <svg xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>Back to Clipper Tool</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- CONFIGURATION & SETTINGS -->
+    <section class="card">
+        <div class="card-title">
+            <span>Global Factory Settings</span>
+            <div class="status-badge-header">
+                <span class="status-dot" id="yt-status-dot"></span>
+                <span id="yt-status-text" style="font-weight: 500;">YouTube Disconnected</span>
+            </div>
+        </div>
+        <div class="grid-2">
+            <div>
+                <h3 style="font-size: 15px; margin-bottom: 15px; color: var(--text-secondary);">Automation Preferences</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="shorts_per_day">Shorts Per Day</label>
+                        <input type="number" id="shorts_per_day" min="1" max="10" value="3">
+                    </div>
+                    <div class="form-group">
+                        <label for="buffer_days">Buffer Days</label>
+                        <input type="number" id="buffer_days" min="1" max="7" value="2">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="transcribe_device">Transcribe Device</label>
+                    <select id="transcribe_device">
+                        <option value="cpu">CPU Only</option>
+                        <option value="cuda">GPU (CUDA)</option>
+                    </select>
+                </div>
+                <button class="btn" id="save-settings-btn">Save Configuration</button>
+            </div>
+            <div style="border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
+                <h3 style="font-size: 15px; margin-bottom: 15px; color: var(--text-secondary);">YouTube API Integration</h3>
+                <div class="form-group">
+                    <label for="youtube_client_id">OAuth Client ID</label>
+                    <input type="text" id="youtube_client_id" placeholder="Enters youtube_client_id...">
+                </div>
+                <div class="form-group">
+                    <label for="youtube_client_secret">OAuth Client Secret</label>
+                    <input type="password" id="youtube_client_secret" placeholder="Enters youtube_client_secret...">
+                </div>
+                <button class="btn btn-secondary" id="link-youtube-btn">Link YouTube Account</button>
+            </div>
+        </div>
+        <div class="grid-2" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+            <div>
+                <h3 style="font-size: 15px; margin-bottom: 15px; color: var(--text-secondary);">GitHub Actions Config</h3>
+                <div class="form-group">
+                    <label for="run_mode">Run Mode</label>
+                    <select id="run_mode">
+                        <option value="local">Local background thread</option>
+                        <option value="remote">GitHub Actions runner</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="downloader_mode">Downloader Mode</label>
+                    <select id="downloader_mode">
+                        <option value="yt-dlp">yt-dlp (Direct Download)</option>
+                        <option value="invidious">Invidious Proxy (Bypass Bot Check)</option>
+                        <option value="local_agent">Local WSL Agent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="github_token">GitHub Token</label>
+                    <input type="password" id="github_token" placeholder="Enters github_token...">
+                </div>
+                <div class="form-group">
+                    <label for="github_repo">GitHub Repository</label>
+                    <input type="text" id="github_repo" placeholder="owner/repo">
+                </div>
+                <div class="form-group">
+                    <label for="github_ref">GitHub Ref</label>
+                    <input type="text" id="github_ref" value="main" placeholder="e.g. main">
+                </div>
+                <div class="form-group">
+                    <label for="github_workflow">GitHub Workflow</label>
+                    <input type="text" id="github_workflow" value="render.yml" placeholder="e.g. render.yml">
+                </div>
+            </div>
+            <div style="border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
+                <h3 style="font-size: 15px; margin-bottom: 15px; color: var(--text-secondary);">S3-Compatible Storage Config</h3>
+                <div class="form-group">
+                    <label for="storage_provider">Storage Provider</label>
+                    <select id="storage_provider">
+                        <option value="local">Local filesystem</option>
+                        <option value="s3">S3 compatible</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="s3_bucket_name">S3 Bucket Name</label>
+                    <input type="text" id="s3_bucket_name" placeholder="Enters bucket name...">
+                </div>
+                <div class="form-group">
+                    <label for="s3_endpoint_url">S3 Endpoint URL</label>
+                    <input type="text" id="s3_endpoint_url" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label for="s3_access_key">S3 Access Key</label>
+                    <input type="text" id="s3_access_key" placeholder="Enters access key...">
+                </div>
+                <div class="form-group">
+                    <label for="s3_secret_key">S3 Secret Key</label>
+                    <input type="password" id="s3_secret_key" placeholder="Enters secret key...">
+                </div>
+                <div class="form-group">
+                    <label for="s3_region">S3 Region</label>
+                    <input type="text" id="s3_region" placeholder="e.g. us-east-1">
+                </div>
+                <div class="form-group">
+                    <label for="s3_public_url_prefix">S3 Public URL Prefix</label>
+                    <input type="text" id="s3_public_url_prefix" placeholder="https://prefix.com/...">
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+            <h3 style="font-size: 15px; margin-bottom: 15px; color: var(--text-secondary);">Storage Allocation & Quota</h3>
+            <div class="grid-2">
+                <div>
+                    <div class="form-group">
+                        <label for="video_storage_limit">Allocated Downloader Space (GB)</label>
+                        <input type="number" id="video_storage_limit" min="1" placeholder="15">
+                    </div>
+                </div>
+                <div style="border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
+                    <div class="quota-visualizer" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                                <span style="color: var(--text-secondary);">Downloader Cache Used</span>
+                                <span id="quota-used-text" style="font-weight: 500;">0.00 GB</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden;">
+                                <div id="quota-used-bar" style="width: 0%; height: 100%; background-color: var(--warning-color); transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                                <span style="color: var(--text-secondary);">Available Space</span>
+                                <span id="quota-available-text" style="font-weight: 500;">0.00 GB</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden;">
+                                <div id="quota-available-bar" style="width: 0%; height: 100%; background-color: var(--success-color); transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MONITORED SOURCE CHANNELS & SCHEDULER JOBS -->
+    <div class="grid-2">
+        
+        <!-- SOURCE CHANNELS -->
+        <section class="card">
+            <div class="card-title">Monitored Channels</div>
+            <div style="margin-bottom: 20px;">
+                <div class="form-group">
+                    <label for="channel_url">Channel URL</label>
+                    <input type="url" id="channel_url" placeholder="https://www.youtube.com/@channel">
+                </div>
+                <div class="form-group">
+                    <label for="channel_name">Channel Name (Optional)</label>
+                    <input type="text" id="channel_name" placeholder="e.g. Linus Tech Tips">
+                </div>
+                <button class="btn" id="add-channel-btn">Add Channel</button>
+            </div>
+            
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Channel</th>
+                            <th>URL</th>
+                            <th style="width: 80px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="channels-list">
+                        <tr>
+                            <td colspan="3" class="empty-state">Loading channels...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ACTIVE SCHEDULER JOBS -->
+        <section class="card">
+            <div class="card-title">Active Scheduler Jobs</div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Job ID</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Info / Log</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jobs-list">
+                        <tr>
+                            <td colspan="4" class="empty-state">Loading active scheduler jobs...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- GENERATED SHORTS HISTORY -->
+    <section class="card">
+        <div class="card-title">Generated Shorts & Upload Registry</div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Video File</th>
+                        <th>Scheduled Time</th>
+                        <th>Status</th>
+                        <th>YouTube Video ID</th>
+                        <th style="width: 130px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="shorts-list">
+                    <tr>
+                        <td colspan="5" class="empty-state">Loading shorts history...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    // System helper: display custom alerts
+    function showAlert(message, type = "success") {
+        const area = document.getElementById("alert-area");
+        const alert = document.createElement("div");
+        alert.className = `alert alert-${type}`;
+        alert.innerHTML = `
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()" style="background:none; border:none; color:inherit; cursor:pointer; font-weight:bold;">&times;</button>
+        `;
+        area.appendChild(alert);
+        setTimeout(() => alert.remove(), 5000);
+    }
+
+    // Basename helper
+    function getBasename(path) {
+        if (!path) return 'Untitled.mp4';
+        return path.split(/[/\\]/).pop();
+    }
+
+    // Badge formatter
+    function getStatusBadge(status) {
+        const s = (status || '').toLowerCase();
+        if (s === 'published') return '<span class="badge badge-success">Published</span>';
+        if (s === 'scheduled') return '<span class="badge badge-info">Scheduled</span>';
+        if (s === 'ready') return '<span class="badge badge-warning">Ready</span>';
+        if (s === 'rendered') return '<span class="badge badge-info">Rendered</span>';
+        if (s === 'failed') return '<span class="badge badge-danger">Failed</span>';
+        return `<span class="badge">${status}</span>`;
+    }
+
+    // Storage quota helper variables & function
+    let lastFetchedUsedGb = 0.0;
+
+    function updateQuotaUI(usedGb, limitGb) {
+        const availableGb = Math.max(0, limitGb - usedGb);
+        const usedPercent = limitGb > 0 ? Math.min(100, Math.max(0, (usedGb / limitGb) * 100)) : 0;
+        const availablePercent = limitGb > 0 ? Math.min(100, Math.max(0, (availableGb / limitGb) * 100)) : 0;
+
+        document.getElementById("quota-used-text").innerText = `${usedGb.toFixed(2)} GB / ${limitGb.toFixed(2)} GB`;
+        document.getElementById("quota-used-bar").style.width = `${usedPercent}%`;
+        
+        document.getElementById("quota-available-text").innerText = `${availableGb.toFixed(2)} GB / ${limitGb.toFixed(2)} GB`;
+        document.getElementById("quota-available-bar").style.width = `${availablePercent}%`;
+    }
+
+    // Load entire dashboard data
+    function loadDashboardData() {
+        // 1. Fetch settings
+        fetch("/api/settings")
+            .then(res => res.json())
+            .then(settings => {
+                document.getElementById("shorts_per_day").value = settings.shorts_per_day || 3;
+                document.getElementById("buffer_days").value = settings.buffer_days || 2;
+                document.getElementById("youtube_client_id").value = settings.youtube_client_id || "";
+                document.getElementById("youtube_client_secret").value = settings.youtube_client_secret || "";
+                document.getElementById("transcribe_device").value = settings.transcribe_device || "cpu";
+                
+                document.getElementById("run_mode").value = settings.run_mode || "local";
+                document.getElementById("downloader_mode").value = settings.downloader_mode || "yt-dlp";
+                document.getElementById("github_token").value = settings.github_token || "";
+                document.getElementById("github_repo").value = settings.github_repo || "";
+                document.getElementById("github_ref").value = settings.github_ref || "main";
+                document.getElementById("github_workflow").value = settings.github_workflow || "render.yml";
+                document.getElementById("storage_provider").value = settings.storage_provider || "local";
+                document.getElementById("s3_bucket_name").value = settings.s3_bucket_name || "";
+                document.getElementById("s3_endpoint_url").value = settings.s3_endpoint_url || "";
+                document.getElementById("s3_access_key").value = settings.s3_access_key || "";
+                document.getElementById("s3_secret_key").value = settings.s3_secret_key || "";
+                document.getElementById("s3_region").value = settings.s3_region || "";
+                document.getElementById("s3_public_url_prefix").value = settings.s3_public_url_prefix || "";
+                document.getElementById("video_storage_limit").value = settings.video_storage_limit !== undefined ? settings.video_storage_limit : 15;
+
+                const dot = document.getElementById("yt-status-dot");
+                const text = document.getElementById("yt-status-text");
+                if (settings.youtube_linked) {
+                    dot.classList.add("active");
+                    text.innerText = "YouTube Connected";
+                    text.style.color = "var(--success-color)";
+                } else {
+                    dot.classList.remove("active");
+                    text.innerText = "YouTube Disconnected";
+                    text.style.color = "var(--text-secondary)";
+                }
+            })
+            .catch(err => {
+                console.error("Error loading settings:", err);
+                showAlert("Error loading application settings.", "danger");
+            });
+
+        // 2. Fetch monitored channels
+        fetch("/api/channels")
+            .then(res => res.json())
+            .then(channels => {
+                const tbody = document.getElementById("channels-list");
+                tbody.innerHTML = "";
+                if (!channels || channels.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="empty-state">No channels monitored.</td></tr>`;
+                    return;
+                }
+                channels.forEach(ch => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td style="font-weight: 500;">${ch.name || 'Unnamed Channel'}</td>
+                        <td><a href="${ch.url}" target="_blank" class="btn-link" style="font-size: 13px;">Link</a></td>
+                        <td>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteChannel('${ch.id}')">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                console.error("Error loading channels:", err);
+                document.getElementById("channels-list").innerHTML = `<tr><td colspan="3" class="empty-state">Failed to load channels.</td></tr>`;
+            });
+
+        // 3. Fetch active scheduler jobs
+        fetch("/api/jobs")
+            .then(res => res.json())
+            .then(jobs => {
+                const tbody = document.getElementById("jobs-list");
+                tbody.innerHTML = "";
+                if (!jobs || jobs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No active queue jobs.</td></tr>`;
+                    return;
+                }
+                jobs.forEach(job => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td style="font-family: monospace;">${job.id}</td>
+                        <td>${job.type || 'render'}</td>
+                        <td>${getStatusBadge(job.status)}</td>
+                        <td style="font-size: 13px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${job.error || ''}">
+                            ${job.error || 'Running smoothly...'}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                console.error("Error loading jobs:", err);
+                document.getElementById("jobs-list").innerHTML = `<tr><td colspan="4" class="empty-state">Failed to load queue jobs.</td></tr>`;
+            });
+
+        // 4. Fetch generated shorts history
+        fetch("/api/shorts")
+            .then(res => res.json())
+            .then(shorts => {
+                const tbody = document.getElementById("shorts-list");
+                tbody.innerHTML = "";
+                if (!shorts || shorts.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No shorts found in database.</td></tr>`;
+                    return;
+                }
+                shorts.forEach(short => {
+                    const tr = document.createElement("tr");
+                    const dateStr = short.scheduled_publish_time 
+                        ? new Date(short.scheduled_publish_time).toLocaleString() 
+                        : 'Immediate';
+                    
+                    const ytLink = short.youtube_video_id 
+                        ? `<a href="https://youtu.be/${short.youtube_video_id}" target="_blank" class="btn-link">${short.youtube_video_id}</a>` 
+                        : '-';
+
+                    tr.innerHTML = `
+                        <td style="font-weight: 500;">${getBasename(short.file_path)}</td>
+                        <td>${dateStr}</td>
+                        <td>${getStatusBadge(short.status)}</td>
+                        <td>${ytLink}</td>
+                        <td>
+                            <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="uploadNow('${short.id}')">Upload Now</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                console.error("Error loading shorts:", err);
+                document.getElementById("shorts-list").innerHTML = `<tr><td colspan="5" class="empty-state">Failed to load shorts registry.</td></tr>`;
+            });
+
+        // 5. Fetch storage quota
+        fetch("/api/storage/quota")
+            .then(res => res.json())
+            .then(data => {
+                lastFetchedUsedGb = data.used_gb;
+                const inputLimit = parseFloat(document.getElementById("video_storage_limit").value) || data.limit_gb;
+                updateQuotaUI(lastFetchedUsedGb, inputLimit);
+            })
+            .catch(err => {
+                console.error("Error loading storage quota:", err);
+            });
+    }
+
+    // Save Settings
+    document.getElementById("save-settings-btn").addEventListener("click", () => {
+        const body = {
+            shorts_per_day: parseInt(document.getElementById("shorts_per_day").value),
+            buffer_days: parseInt(document.getElementById("buffer_days").value),
+            youtube_client_id: document.getElementById("youtube_client_id").value,
+            youtube_client_secret: document.getElementById("youtube_client_secret").value,
+            transcribe_device: document.getElementById("transcribe_device").value,
+            run_mode: document.getElementById("run_mode").value,
+            downloader_mode: document.getElementById("downloader_mode").value,
+            github_token: document.getElementById("github_token").value,
+            github_repo: document.getElementById("github_repo").value,
+            github_ref: document.getElementById("github_ref").value,
+            github_workflow: document.getElementById("github_workflow").value,
+            storage_provider: document.getElementById("storage_provider").value,
+            s3_bucket_name: document.getElementById("s3_bucket_name").value,
+            s3_endpoint_url: document.getElementById("s3_endpoint_url").value,
+            s3_access_key: document.getElementById("s3_access_key").value,
+            s3_secret_key: document.getElementById("s3_secret_key").value,
+            s3_region: document.getElementById("s3_region").value,
+            s3_public_url_prefix: document.getElementById("s3_public_url_prefix").value,
+            video_storage_limit: parseInt(document.getElementById("video_storage_limit").value) || 15
+        };
+
+        fetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success") {
+                showAlert("Configuration saved successfully!");
+                loadDashboardData();
+            } else {
+                showAlert("Failed to save settings.", "danger");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showAlert("Error saving settings.", "danger");
+        });
+    });
+
+    // Link YouTube account (OAuth Flow)
+    document.getElementById("link-youtube-btn").addEventListener("click", () => {
+        // Save settings first to make sure client ID and Secret are updated in DB
+        const client_id = document.getElementById("youtube_client_id").value;
+        const client_secret = document.getElementById("youtube_client_secret").value;
+
+        if (!client_id || !client_secret) {
+            showAlert("Please enter Client ID and Client Secret before linking YouTube.", "danger");
+            return;
+        }
+
+        const body = {
+            youtube_client_id: client_id,
+            youtube_client_secret: client_secret
+        };
+
+        fetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        })
+        .then(res => res.json())
+        .then(() => {
+            const redirectUri = window.location.origin + window.location.pathname;
+            return fetch(`/api/youtube/auth?redirect_uri=${encodeURIComponent(redirectUri)}`);
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.auth_url) {
+                window.location.href = data.auth_url;
+            } else {
+                showAlert("Could not retrieve YouTube auth URL from server.", "danger");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showAlert("Failed to initiate YouTube linking: " + err, "danger");
+        });
+    });
+
+    // Add Channel
+    document.getElementById("add-channel-btn").addEventListener("click", () => {
+        const url = document.getElementById("channel_url").value.trim();
+        const name = document.getElementById("channel_name").value.trim();
+
+        if (!url) {
+            showAlert("Channel URL is required.", "danger");
+            return;
+        }
+
+        fetch("/api/channels", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url, name: name || null })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success") {
+                showAlert("Channel added successfully!");
+                document.getElementById("channel_url").value = "";
+                document.getElementById("channel_name").value = "";
+                loadDashboardData();
+            } else {
+                showAlert("Failed to add channel.", "danger");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showAlert("Error adding channel.", "danger");
+        });
+    });
+
+    // Delete Channel
+    window.deleteChannel = function(id) {
+        if (!confirm("Are you sure you want to stop monitoring this channel?")) return;
+        fetch(`/api/channels/${id}`, { method: "DELETE" })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    showAlert("Channel removed.");
+                    loadDashboardData();
+                } else {
+                    showAlert("Failed to remove channel.", "danger");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showAlert("Error removing channel.", "danger");
+            });
+    }
+
+    // Upload Short Now
+    window.uploadNow = function(id) {
+        showAlert("Triggering manual upload...", "warning");
+        fetch(`/api/shorts/upload/${id}`, { method: "POST" })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    showAlert("Upload task triggered successfully in the background.");
+                    // Refresh data in a few seconds to verify changes
+                    setTimeout(loadDashboardData, 4000);
+                } else {
+                    showAlert("Failed to initiate manual upload.", "danger");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showAlert("Error initiating manual upload.", "danger");
+            });
+    }
+
+    // Initial check for OAuth return code
+    window.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("video_storage_limit").addEventListener("input", (e) => {
+            const inputLimit = parseFloat(e.target.value) || 15.0;
+            updateQuotaUI(lastFetchedUsedGb, inputLimit);
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get("code");
+        if (code) {
+            const redirectUri = window.location.origin + window.location.pathname;
+            fetch(`/api/youtube/callback?code=${code}&redirect_uri=${encodeURIComponent(redirectUri)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        showAlert("YouTube Account Linked Successfully!", "success");
+                    } else {
+                        showAlert("Failed to save YouTube credentials: " + (data.detail || "Unknown error"), "danger");
+                    }
+                    // Clean URL code parameter
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    loadDashboardData();
+                })
+                .catch(err => {
+                    console.error(err);
+                    showAlert("Error completing YouTube link: " + err, "danger");
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    loadDashboardData();
+                });
+        } else {
+            loadDashboardData();
+        }
+    });
+</script>
+
+</body>
+</html>
