@@ -345,13 +345,16 @@ def _check_invidious_metadata_error(video_id: str, domains: list[str]) -> Option
 
 
 def download_video(
-    url: str, progress_hook: Optional[Callable[[dict], None]] = None
+    url: str,
+    progress_hook: Optional[Callable[[dict], None]] = None,
+    downloader_mode: Optional[str] = None
 ) -> Path:
     """Download `url` to downloads/<uuid>.mp4 and return the file path.
 
     Args:
         url: source video URL.
         progress_hook: optional yt-dlp progress callback.
+        downloader_mode: optional selection ("yt-dlp" or "invidious")
 
     Raises:
         YouTubeDownloadError: on any download failure, with a classified error code.
@@ -359,9 +362,26 @@ def download_video(
     if not url or not url.strip():
         raise YouTubeDownloadError("INVALID_URL", "No video URL was provided.")
 
+    if not downloader_mode:
+        try:
+            from . import db
+            downloader_mode = db.get_setting("downloader_mode", "yt-dlp")
+        except Exception:
+            downloader_mode = "yt-dlp"
+
     clip_uuid = uuid.uuid4().hex
     out_template = str(DOWNLOADS_DIR / f"{clip_uuid}.%(ext)s")
     expected_path = DOWNLOADS_DIR / f"{clip_uuid}.mp4"
+
+    # If downloader mode is Invidious, run Invidious proxy download first
+    if downloader_mode == "invidious":
+        logger.info("Downloader mode 'invidious' selected. Attempting Invidious proxy download first...")
+        try:
+            if _download_via_invidious_fallback(url, expected_path):
+                if expected_path.exists():
+                    return expected_path
+        except Exception as e:
+            logger.warning("Preferred Invidious proxy download failed: %s. Falling back to yt-dlp...", e)
 
     # Configure the download parameters
     config = DownloadConfiguration(outtmpl=out_template, progress_hook=progress_hook)

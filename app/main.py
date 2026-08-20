@@ -548,6 +548,7 @@ class UpdateSettingsRequest(BaseModel):
     github_ref: Optional[str] = None
     github_workflow: Optional[str] = None
     run_mode: Optional[str] = None
+    downloader_mode: Optional[str] = None
     public_server_url: Optional[str] = None
     youtube_cookies: Optional[str] = None
 
@@ -638,6 +639,7 @@ def get_settings() -> dict:
             "github_ref": db.get_setting("github_ref") or "main",
             "github_workflow": db.get_setting("github_workflow") or "render.yml",
             "run_mode": db.get_setting("run_mode") or "local",
+            "downloader_mode": db.get_setting("downloader_mode") or "yt-dlp",
             "public_server_url": db.get_setting("public_server_url") or "",
             "youtube_cookies": db.get_setting("youtube_cookies") or ""
         }
@@ -690,6 +692,8 @@ def update_settings(req: UpdateSettingsRequest) -> dict:
             set_fn("github_workflow", req.github_workflow)
         if req.run_mode is not None:
             set_fn("run_mode", req.run_mode)
+        if req.downloader_mode is not None:
+            set_fn("downloader_mode", req.downloader_mode)
         if req.public_server_url is not None:
             set_fn("public_server_url", req.public_server_url)
         if req.youtube_cookies is not None:
@@ -865,7 +869,8 @@ def get_job_config(
         "source_video": source_video,
         "req": req_payload,
         "request_payload": req_payload,
-        "youtube_cookies": db.get_setting("youtube_cookies") or ""
+        "youtube_cookies": db.get_setting("youtube_cookies") or "",
+        "downloader_mode": db.get_setting("downloader_mode") or "yt-dlp"
     }
 
 

@@ -143,7 +143,8 @@ def main():
             logger.info("Source file downloaded successfully: %s", source_path)
         else:
             logger.info("Downloading from URL: %s", req.video_url)
-            source_path = downloader.download_video(req.video_url)
+            downloader_mode = config.get("downloader_mode", "yt-dlp")
+            source_path = downloader.download_video(req.video_url, downloader_mode=downloader_mode)
 
         report_progress("downloading", 25.0, "Download complete.")
 
