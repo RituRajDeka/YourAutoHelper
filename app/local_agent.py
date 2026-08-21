@@ -9,6 +9,7 @@ and fires callbacks to update status.
 
 import sys
 import os
+import json
 import time
 import argparse
 import logging
@@ -152,7 +153,7 @@ def process_job(server_url: str, token: str, job: dict) -> None:
     if request_json_raw:
         if isinstance(request_json_raw, str):
             try:
-                request_json = requests.utils.json.loads(request_json_raw)
+                request_json = json.loads(request_json_raw)
             except Exception as e:
                 logger.error("Failed to parse request_json string: %s", e)
         elif isinstance(request_json_raw, dict):
@@ -554,26 +555,26 @@ def main() -> None:
     # Main polling loop
     while True:
         try:
-            logger.debug("Polling for pending downloader jobs...")
-            url = f"{server_url}/api/jobs/pending?token={token}"
+            logger.debug("Polling for downloader jobs...")
+            url = f"{server_url}/api/jobs"
             
             # Perform query
-            resp = requests.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=15)
+            resp = requests.get(url, timeout=15)
             resp.raise_for_status()
-            pending_jobs = resp.json()
+            all_jobs = resp.json()
             
-            if pending_jobs:
-                if isinstance(pending_jobs, list):
+            if all_jobs and isinstance(all_jobs, list):
+                pending_jobs = [
+                    j for j in all_jobs 
+                    if j.get("status") in ("PENDING", "DOWNLOAD_QUEUED")
+                ]
+                if pending_jobs:
                     logger.info("Found %d pending job(s) from server.", len(pending_jobs))
                     for job in pending_jobs:
                         try:
                             process_job(server_url, token, job)
                         except Exception as job_err:
                             logger.exception("Error processing individual job: %s", job_err)
-                elif isinstance(pending_jobs, dict):
-                    # Handle single job return if applicable
-                    logger.info("Found pending job from server.")
-                    process_job(server_url, token, pending_jobs)
             
         except requests.exceptions.RequestException as req_err:
             logger.warning("Network issue connecting to server, retrying in %d seconds: %s", poll_interval, req_err)
