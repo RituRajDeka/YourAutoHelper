@@ -5,7 +5,8 @@ WORKDIR /app
 RUN apk add --no-cache \
     ffmpeg \
     curl \
-    bash
+    bash \
+    sqlite-libs
 
 # Copy python dependencies and install lightweight list
 COPY requirements-deploy.txt .
