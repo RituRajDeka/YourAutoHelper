@@ -18,6 +18,9 @@ import sqlite3
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, File, HTTPException, UploadFile, BackgroundTasks, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -1087,3 +1090,5 @@ if WEB_DIST_DIR.is_dir():
     app.mount("/", StaticFiles(directory=str(WEB_DIST_DIR), html=True), name="dist_root")
 elif STATIC_DIR.is_dir():
     app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static_root")
+
+# Force rebuild comment 2
