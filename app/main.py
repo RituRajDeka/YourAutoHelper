@@ -365,7 +365,8 @@ def generate(req: GenerateRequest, request: Request) -> dict:
     run_mode = db.get_setting("run_mode", "local")
     if run_mode == "remote":
         # Check that GitHub integration settings are configured
-        github_token = db.get_setting('github_token')
+        import os
+        github_token = db.get_setting('github_token') or os.environ.get('CLIPFORGE_GITHUB_TOKEN') or os.environ.get('github_token')
         github_repo = db.get_setting('github_repo')
         if not github_token or not github_repo or '/' not in github_repo:
             raise HTTPException(
