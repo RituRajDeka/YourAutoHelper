@@ -465,33 +465,33 @@ def process_job(server_url: str, token: str, job: dict) -> None:
         if content_type:
             extra_args['ContentType'] = content_type
 
-        logger.info("Uploading %s to S3 bucket %s key %s...", source_path.name, bucket_name, remote_name)
-        
-        # Configure TransferConfig to disable multipart upload (use single-part upload up to 5GB)
-        # to ensure compatibility with Storj S3 gateway which requires Content-Length header.
-        from boto3.s3.transfer import TransferConfig
-        transfer_config = TransferConfig(multipart_threshold=5 * 1024 * 1024 * 1024)
+        # Force single-part PUT with explicit ContentLength header to satisfy Storj gateway
+        file_size = os.path.getsize(source_path)
         
         # Try uploading with public-read permission first (standard client default)
         try:
             extra_args['ACL'] = 'public-read'
-            s3_client.upload_file(
-                Filename=str(source_path),
-                Bucket=bucket_name,
-                Key=remote_name,
-                ExtraArgs=extra_args,
-                Config=transfer_config
-            )
+            logger.info("Performing S3 PUT with ACL 'public-read' (size: %d bytes)...", file_size)
+            with open(source_path, 'rb') as f:
+                s3_client.put_object(
+                    Bucket=bucket_name,
+                    Key=remote_name,
+                    Body=f,
+                    ContentLength=file_size,
+                    **extra_args
+                )
         except Exception as acl_exc:
-            logger.warning("Uploading with public-read ACL failed (bucket policies might block it): %s. Retrying without ACL...", acl_exc)
+            logger.warning("PUT with public-read ACL failed (bucket policies might block it): %s. Retrying without ACL...", acl_exc)
             extra_args.pop('ACL', None)
-            s3_client.upload_file(
-                Filename=str(source_path),
-                Bucket=bucket_name,
-                Key=remote_name,
-                ExtraArgs=extra_args,
-                Config=transfer_config
-            )
+            logger.info("Performing S3 PUT without ACL (size: %d bytes)...", file_size)
+            with open(source_path, 'rb') as f:
+                s3_client.put_object(
+                    Bucket=bucket_name,
+                    Key=remote_name,
+                    Body=f,
+                    ContentLength=file_size,
+                    **extra_args
+                )
 
         # Verify upload succeeds via head_object
         logger.info("Verifying upload of key %s on S3...", remote_name)
