@@ -107,7 +107,8 @@ def report_progress(
     s3_url: Optional[str] = None
 ) -> None:
     """Send job callback to the Railway server."""
-    url = f"{server_url}/api/jobs/{job_id}/callback?token={callback_token}"
+    actual_server_url = os.environ.get("CLIPFORGE_CALLBACK_SERVER_URL") or server_url
+    url = f"{actual_server_url}/api/jobs/{job_id}/callback?token={callback_token}"
     payload = {
         "status": status,
         "progress": round(progress, 2),
