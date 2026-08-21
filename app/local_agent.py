@@ -467,6 +467,11 @@ def process_job(server_url: str, token: str, job: dict) -> None:
 
         logger.info("Uploading %s to S3 bucket %s key %s...", source_path.name, bucket_name, remote_name)
         
+        # Configure TransferConfig to disable multipart upload (use single-part upload up to 5GB)
+        # to ensure compatibility with Storj S3 gateway which requires Content-Length header.
+        from boto3.s3.transfer import TransferConfig
+        transfer_config = TransferConfig(multipart_threshold=5 * 1024 * 1024 * 1024)
+        
         # Try uploading with public-read permission first (standard client default)
         try:
             extra_args['ACL'] = 'public-read'
@@ -474,7 +479,8 @@ def process_job(server_url: str, token: str, job: dict) -> None:
                 Filename=str(source_path),
                 Bucket=bucket_name,
                 Key=remote_name,
-                ExtraArgs=extra_args
+                ExtraArgs=extra_args,
+                Config=transfer_config
             )
         except Exception as acl_exc:
             logger.warning("Uploading with public-read ACL failed (bucket policies might block it): %s. Retrying without ACL...", acl_exc)
@@ -483,7 +489,8 @@ def process_job(server_url: str, token: str, job: dict) -> None:
                 Filename=str(source_path),
                 Bucket=bucket_name,
                 Key=remote_name,
-                ExtraArgs=extra_args
+                ExtraArgs=extra_args,
+                Config=transfer_config
             )
 
         # Verify upload succeeds via head_object
