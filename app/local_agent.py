@@ -301,7 +301,10 @@ def process_job(server_url: str, token: str, job: dict) -> None:
     if s3_settings.get("s3_region"):
         s3_client_kwargs['region_name'] = s3_settings["s3_region"]
     if s3_settings.get("s3_endpoint_url"):
-        s3_client_kwargs['config'] = Config(signature_version='s3v4')
+        s3_client_kwargs['config'] = Config(
+            signature_version='s3v4',
+            s3={'payload_signing_enabled': False}
+        )
 
     try:
         s3_client = boto3.client('s3', **s3_client_kwargs)
