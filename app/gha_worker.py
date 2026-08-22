@@ -129,24 +129,15 @@ def main():
         report_progress("downloading", 10.0, "Starting download...")
         source_id = req.upload_id or req.download_id
         s3_url = config.get("s3_url")
-        if s3_url:
-            logger.info("Downloading source file from S3: %s", s3_url)
-            DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
-            import re
-            match = re.search(r'([A-Za-z0-9_-]{11})\.mp4$', s3_url)
-            video_id = match.group(1) if match else "source_video"
-            source_path = DOWNLOADS_DIR / f"{video_id}.mp4"
-            
-            import boto3
-            from botocore.client import Config
-            s3_settings = config.get("s3_settings", {})
-            bucket_name = s3_settings.get("s3_bucket_name")
-            
-            if "sources/" in s3_url:
-                s3_key = "sources/" + s3_url.split("sources/")[1]
-            else:
-                s3_key = f"sources/{video_id}.mp4"
-                
+        source_video_id = config.get("source_video", {}).get("source_video_id")
+        
+        s3_settings = config.get("s3_settings", {})
+        use_s3_source = False
+        s3_bucket = s3_settings.get("s3_bucket_name")
+        s3_key = None
+        
+        if s3_settings.get("storage_provider") == "s3" and s3_bucket:
+            # Check if this video (by ID or URL) already exists in S3
             s3_client_kwargs = {}
             if s3_settings.get("s3_access_key"):
                 s3_client_kwargs['aws_access_key_id'] = s3_settings["s3_access_key"]
@@ -157,11 +148,64 @@ def main():
             if s3_settings.get("s3_region"):
                 s3_client_kwargs['region_name'] = s3_settings["s3_region"]
             if s3_settings.get("s3_endpoint_url"):
-                s3_client_kwargs['config'] = Config(signature_version='s3v4')
+                from botocore.client import Config as BotoConfig
+                s3_client_kwargs['config'] = BotoConfig(
+                    signature_version='s3v4',
+                    request_checksum_calculation="when_required",
+                    response_checksum_validation="when_required"
+                )
                 
-            logger.info("Downloading from S3 Bucket: %s, Key: %s", bucket_name, s3_key)
+            try:
+                import boto3
+                s3_check_client = boto3.client('s3', **s3_client_kwargs)
+                possible_keys = []
+                if s3_url:
+                    if "sources/" in s3_url:
+                        possible_keys.append("sources/" + s3_url.split("sources/")[1])
+                    else:
+                        possible_keys.append(s3_url.split(s3_bucket + "/")[-1])
+                if source_video_id:
+                    possible_keys.append(f"sources/{source_video_id}.mp4")
+                    possible_keys.append(f"{source_video_id}.mp4")
+                
+                for key in possible_keys:
+                    try:
+                        s3_check_client.head_object(Bucket=s3_bucket, Key=key)
+                        s3_key = key
+                        use_s3_source = True
+                        logger.info("Found existing source video in S3 bucket: %s/%s", s3_bucket, s3_key)
+                        break
+                    except Exception:
+                        continue
+            except Exception as check_err:
+                logger.warning("Failed to check existing S3 source files: %s", check_err)
+
+        if use_s3_source:
+            logger.info("Downloading source file from S3: %s/%s", s3_bucket, s3_key)
+            DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+            video_id = source_video_id or "source_video"
+            source_path = DOWNLOADS_DIR / f"{video_id}.mp4"
+            
+            import boto3
+            from botocore.client import Config as BotoConfig
+            s3_client_kwargs = {}
+            if s3_settings.get("s3_access_key"):
+                s3_client_kwargs['aws_access_key_id'] = s3_settings["s3_access_key"]
+            if s3_settings.get("s3_secret_key"):
+                s3_client_kwargs['aws_secret_access_key'] = s3_settings["s3_secret_key"]
+            if s3_settings.get("s3_endpoint_url"):
+                s3_client_kwargs['endpoint_url'] = s3_settings["s3_endpoint_url"]
+            if s3_settings.get("s3_region"):
+                s3_client_kwargs['region_name'] = s3_settings["s3_region"]
+            if s3_settings.get("s3_endpoint_url"):
+                s3_client_kwargs['config'] = BotoConfig(
+                    signature_version='s3v4',
+                    request_checksum_calculation="when_required",
+                    response_checksum_validation="when_required"
+                )
+                
             s3_client = boto3.client('s3', **s3_client_kwargs)
-            s3_client.download_file(bucket_name, s3_key, str(source_path))
+            s3_client.download_file(s3_bucket, s3_key, str(source_path))
             logger.info("Source file downloaded successfully from S3: %s", source_path)
         elif source_id:
             logger.info("Downloading source file from server for id: %s", source_id)
