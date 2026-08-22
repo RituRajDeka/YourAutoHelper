@@ -54,37 +54,40 @@ class S3StorageProvider(StorageProvider):
         if region_name:
             client_kwargs['region_name'] = region_name
             
-        # Enable path style addressing (s3v4) for custom endpoints like MinIO
-        if endpoint_url:
-            client_kwargs['config'] = Config(signature_version='s3v4')
+        # Configure client to avoid chunked encoding issues (MissingContentLength) on S3-compatible endpoints
+        client_kwargs['config'] = Config(
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required"
+        )
             
         self.s3_client = boto3.client('s3', **client_kwargs)
 
     def upload_file(self, local_path: str, remote_name: str) -> str:
         """Uploads a file to S3, trying public-read ACL first, and returns its public URL."""
         content_type, _ = mimetypes.guess_type(local_path)
-        extra_args = {}
-        if content_type:
-            extra_args['ContentType'] = content_type
+        file_size = os.path.getsize(local_path)
 
         # Try to upload with public-read permission
         try:
-            extra_args['ACL'] = 'public-read'
-            self.s3_client.upload_file(
-                Filename=local_path,
-                Bucket=self.bucket_name,
-                Key=remote_name,
-                ExtraArgs=extra_args
-            )
+            with open(local_path, 'rb') as f:
+                self.s3_client.put_object(
+                    Bucket=self.bucket_name,
+                    Key=remote_name,
+                    Body=f,
+                    ContentLength=file_size,
+                    ContentType=content_type or 'video/mp4',
+                    ACL='public-read'
+                )
         except Exception:
             # Fall back to uploading without ACL if restricted by bucket policies
-            extra_args.pop('ACL', None)
-            self.s3_client.upload_file(
-                Filename=local_path,
-                Bucket=self.bucket_name,
-                Key=remote_name,
-                ExtraArgs=extra_args
-            )
+            with open(local_path, 'rb') as f:
+                self.s3_client.put_object(
+                    Bucket=self.bucket_name,
+                    Key=remote_name,
+                    Body=f,
+                    ContentLength=file_size,
+                    ContentType=content_type or 'video/mp4'
+                )
 
         if self.public_url_prefix:
             prefix = self.public_url_prefix.rstrip('/')

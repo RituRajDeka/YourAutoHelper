@@ -300,11 +300,12 @@ def process_job(server_url: str, token: str, job: dict) -> None:
         s3_client_kwargs['endpoint_url'] = s3_settings["s3_endpoint_url"]
     if s3_settings.get("s3_region"):
         s3_client_kwargs['region_name'] = s3_settings["s3_region"]
-    if s3_settings.get("s3_endpoint_url"):
-        s3_client_kwargs['config'] = Config(
-            signature_version='s3v4',
-            s3={'payload_signing_enabled': False}
-        )
+
+    # Disable default checksum calculation to prevent chunked encoding (MissingContentLength) on S3-compatible endpoints
+    s3_client_kwargs['config'] = Config(
+        request_checksum_calculation="when_required",
+        response_checksum_validation="when_required"
+    )
 
     try:
         s3_client = boto3.client('s3', **s3_client_kwargs)
@@ -464,36 +465,29 @@ def process_job(server_url: str, token: str, job: dict) -> None:
 
     try:
         content_type, _ = mimetypes.guess_type(str(source_path))
-        extra_args = {}
-        if content_type:
-            extra_args['ContentType'] = content_type
-
-        # Force single-part PUT with explicit ContentLength header to satisfy Storj gateway
-        file_size = os.path.getsize(source_path)
+        file_size = source_path.stat().st_size
+        logger.info("Uploading %s (size: %s bytes) to S3 bucket %s key %s...", source_path.name, file_size, bucket_name, remote_name)
         
         # Try uploading with public-read permission first (standard client default)
         try:
-            extra_args['ACL'] = 'public-read'
-            logger.info("Performing S3 PUT with ACL 'public-read' (size: %d bytes)...", file_size)
             with open(source_path, 'rb') as f:
                 s3_client.put_object(
                     Bucket=bucket_name,
                     Key=remote_name,
                     Body=f,
                     ContentLength=file_size,
-                    **extra_args
+                    ContentType=content_type or 'video/mp4',
+                    ACL='public-read'
                 )
         except Exception as acl_exc:
-            logger.warning("PUT with public-read ACL failed (bucket policies might block it): %s. Retrying without ACL...", acl_exc)
-            extra_args.pop('ACL', None)
-            logger.info("Performing S3 PUT without ACL (size: %d bytes)...", file_size)
+            logger.warning("Uploading with public-read ACL failed (bucket policies might block it): %s. Retrying without ACL...", acl_exc)
             with open(source_path, 'rb') as f:
                 s3_client.put_object(
                     Bucket=bucket_name,
                     Key=remote_name,
                     Body=f,
                     ContentLength=file_size,
-                    **extra_args
+                    ContentType=content_type or 'video/mp4'
                 )
 
         # Verify upload succeeds via head_object
