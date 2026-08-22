@@ -966,22 +966,26 @@ def job_callback(
         
         # Auto-trigger GHA workflow if status is DOWNLOADED and render_mode is auto
         if req.status and req.status.upper() == "DOWNLOADED":
-            run_mode = db.get_setting("run_mode", "local")
-            render_mode = db.get_setting("render_mode", "auto")
-            if run_mode == "remote" and render_mode == "auto":
-                logger.info("[%s] Auto-triggering GHA render after successful download", job_id)
-                server_url = db.get_setting("public_server_url")
-                if not server_url:
-                    server_url = str(request.base_url).rstrip("/")
-                
-                from . import github_dispatch
-                success, err_msg = github_dispatch.dispatch_workflow(job_id, db_token, server_url)
-                if success:
-                    logger.info("[%s] Auto GHA render triggered successfully", job_id)
-                    db.update_job_status(job_id, 'QUEUED')
-                else:
-                    logger.error("[%s] Failed to auto-trigger GHA: %s", job_id, err_msg)
-                    db.update_job_status(job_id, 'FAILED', error=f"Auto GHA trigger failed: {err_msg}")
+            old_status = (job_row.get("status") or "").upper()
+            if old_status in ("QUEUED", "RUNNING", "COMPLETED", "SUCCESS"):
+                logger.info("[%s] Skip auto-trigger GHA: job is already in %s state", job_id, old_status)
+            else:
+                run_mode = db.get_setting("run_mode", "local")
+                render_mode = db.get_setting("render_mode", "auto")
+                if run_mode == "remote" and render_mode == "auto":
+                    logger.info("[%s] Auto-triggering GHA render after successful download", job_id)
+                    server_url = db.get_setting("public_server_url")
+                    if not server_url:
+                        server_url = str(request.base_url).rstrip("/")
+                    
+                    from . import github_dispatch
+                    success, err_msg = github_dispatch.dispatch_workflow(job_id, db_token, server_url)
+                    if success:
+                        logger.info("[%s] Auto GHA render triggered successfully", job_id)
+                        db.update_job_status(job_id, 'QUEUED')
+                    else:
+                        logger.error("[%s] Failed to auto-trigger GHA: %s", job_id, err_msg)
+                        db.update_job_status(job_id, 'FAILED', error=f"Auto GHA trigger failed: {err_msg}")
     except Exception as e:
         logger.exception("Failed to update database from job callback: %s", e)
         raise HTTPException(status_code=500, detail=f"Database update failed: {e}")
@@ -1107,6 +1111,13 @@ def dispatch_job(job_id: str, request: Request) -> dict:
     job_row = db.get_job(job_id)
     if not job_row:
         raise HTTPException(status_code=404, detail="Job not found.")
+        
+    current_status = (job_row.get("status") or "").upper()
+    if current_status in ("QUEUED", "RUNNING", "COMPLETED", "SUCCESS"):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Job cannot be manually dispatched because it is already {current_status}."
+        )
         
     callback_token = job_row.get('callback_token')
     if not callback_token:
