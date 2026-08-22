@@ -446,6 +446,13 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="render_mode">GHA Trigger Mode</label>
+                    <select id="render_mode">
+                        <option value="auto">Automatic (Trigger GHA after download)</option>
+                        <option value="manual">Manual (Trigger GHA from dashboard)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="downloader_mode">Downloader Mode</label>
                     <select id="downloader_mode">
                         <option value="yt-dlp">yt-dlp (Direct Download)</option>
@@ -587,11 +594,12 @@
                             <th>Type</th>
                             <th>Status</th>
                             <th>Info / Log</th>
+                            <th style="width: 120px;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="jobs-list">
                         <tr>
-                            <td colspan="4" class="empty-state">Loading active scheduler jobs...</td>
+                            <td colspan="5" class="empty-state">Loading active scheduler jobs...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -684,6 +692,7 @@
                 document.getElementById("transcribe_device").value = settings.transcribe_device || "cpu";
                 
                 document.getElementById("run_mode").value = settings.run_mode || "local";
+                document.getElementById("render_mode").value = settings.render_mode || "auto";
                 document.getElementById("downloader_mode").value = settings.downloader_mode || "yt-dlp";
                 document.getElementById("github_token").value = settings.github_token || "";
                 document.getElementById("github_repo").value = settings.github_repo || "";
@@ -749,11 +758,16 @@
                 const tbody = document.getElementById("jobs-list");
                 tbody.innerHTML = "";
                 if (!jobs || jobs.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No active queue jobs.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No active queue jobs.</td></tr>`;
                     return;
                 }
                 jobs.forEach(job => {
                     const tr = document.createElement("tr");
+                    const status = (job.status || "PENDING").toUpperCase();
+                    let actionHtml = '<span style="color: var(--text-secondary);">—</span>';
+                    if (status === "DOWNLOADED" || status === "PENDING" || status === "FAILED" || status === "ERROR") {
+                        actionHtml = `<button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; background-color: var(--primary-color);" onclick="dispatchManualJob('${job.id}')">Render (GHA)</button>`;
+                    }
                     tr.innerHTML = `
                         <td style="font-family: monospace;">${job.id}</td>
                         <td>${job.type || 'render'}</td>
@@ -761,13 +775,14 @@
                         <td style="font-size: 13px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${job.error || ''}">
                             ${job.error || 'Running smoothly...'}
                         </td>
+                        <td>${actionHtml}</td>
                     `;
                     tbody.appendChild(tr);
                 });
             })
             .catch(err => {
                 console.error("Error loading jobs:", err);
-                document.getElementById("jobs-list").innerHTML = `<tr><td colspan="4" class="empty-state">Failed to load queue jobs.</td></tr>`;
+                document.getElementById("jobs-list").innerHTML = `<tr><td colspan="5" class="empty-state">Failed to load queue jobs.</td></tr>`;
             });
 
         // 4. Fetch generated shorts history
@@ -829,6 +844,7 @@
             youtube_client_secret: document.getElementById("youtube_client_secret").value,
             transcribe_device: document.getElementById("transcribe_device").value,
             run_mode: document.getElementById("run_mode").value,
+            render_mode: document.getElementById("render_mode").value,
             downloader_mode: document.getElementById("downloader_mode").value,
             github_token: document.getElementById("github_token").value,
             github_repo: document.getElementById("github_repo").value,
@@ -952,6 +968,26 @@
             .catch(err => {
                 console.error(err);
                 showAlert("Error removing channel.", "danger");
+            });
+    }
+
+    // Dispatch Manual GHA Job
+    window.dispatchManualJob = function(jobId) {
+        if (!confirm("Are you sure you want to manually trigger GitHub Actions rendering for this video?")) return;
+        showAlert("Triggering manual GHA render...", "warning");
+        fetch(`/api/jobs/${jobId}/dispatch`, { method: "POST" })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    showAlert("Manual GHA render triggered successfully!");
+                    loadDashboardData();
+                } else {
+                    showAlert("Failed to trigger GHA: " + (data.detail || "unknown error"), "danger");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showAlert("Error triggering GHA.", "danger");
             });
     }
 

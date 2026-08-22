@@ -559,6 +559,7 @@ class UpdateSettingsRequest(BaseModel):
     public_server_url: Optional[str] = None
     youtube_cookies: Optional[str] = None
     video_storage_limit: Optional[int] = None
+    render_mode: Optional[str] = None
 
 
 
@@ -650,7 +651,8 @@ def get_settings() -> dict:
             "downloader_mode": db.get_setting("downloader_mode") or "yt-dlp",
             "public_server_url": db.get_setting("public_server_url") or "",
             "youtube_cookies": db.get_setting("youtube_cookies") or "",
-            "video_storage_limit": int(db.get_setting("video_storage_limit") or 15)
+            "video_storage_limit": int(db.get_setting("video_storage_limit") or 15),
+            "render_mode": db.get_setting("render_mode") or "auto"
         }
 
 
@@ -709,6 +711,8 @@ def update_settings(req: UpdateSettingsRequest) -> dict:
             set_fn("youtube_cookies", req.youtube_cookies)
         if req.video_storage_limit is not None:
             set_fn("video_storage_limit", req.video_storage_limit)
+        if req.render_mode is not None:
+            set_fn("render_mode", req.render_mode)
             
         return {"status": "success"}
     except Exception as e:
@@ -927,6 +931,7 @@ def get_job_config(
 def job_callback(
     job_id: str,
     req: JobCallbackRequest,
+    request: Request,
     authorization: Optional[str] = Header(None),
     token: Optional[str] = Query(None)
 ) -> dict:
@@ -958,6 +963,25 @@ def job_callback(
             seo_metadata=req.seo_metadata,
             clips=req.clips
         )
+        
+        # Auto-trigger GHA workflow if status is DOWNLOADED and render_mode is auto
+        if req.status and req.status.upper() == "DOWNLOADED":
+            run_mode = db.get_setting("run_mode", "local")
+            render_mode = db.get_setting("render_mode", "auto")
+            if run_mode == "remote" and render_mode == "auto":
+                logger.info("[%s] Auto-triggering GHA render after successful download", job_id)
+                server_url = db.get_setting("public_server_url")
+                if not server_url:
+                    server_url = str(request.base_url).rstrip("/")
+                
+                from . import github_dispatch
+                success, err_msg = github_dispatch.dispatch_workflow(job_id, db_token, server_url)
+                if success:
+                    logger.info("[%s] Auto GHA render triggered successfully", job_id)
+                    db.update_job_status(job_id, 'QUEUED')
+                else:
+                    logger.error("[%s] Failed to auto-trigger GHA: %s", job_id, err_msg)
+                    db.update_job_status(job_id, 'FAILED', error=f"Auto GHA trigger failed: {err_msg}")
     except Exception as e:
         logger.exception("Failed to update database from job callback: %s", e)
         raise HTTPException(status_code=500, detail=f"Database update failed: {e}")
@@ -1076,6 +1100,47 @@ def ai_edit(req: AIEditRequest) -> dict:
     except Exception as exc:
         logger.error("ai_edit failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc))
+
+@app.post("/api/jobs/{job_id}/dispatch")
+def dispatch_job(job_id: str, request: Request) -> dict:
+    """Manually dispatch a pending or downloaded job to GitHub Actions workflow."""
+    job_row = db.get_job(job_id)
+    if not job_row:
+        raise HTTPException(status_code=404, detail="Job not found.")
+        
+    callback_token = job_row.get('callback_token')
+    if not callback_token:
+        import secrets
+        callback_token = secrets.token_hex(16)
+        import sqlite3
+        conn = sqlite3.connect(db.get_db_path())
+        cursor = conn.cursor()
+        cursor.execute("UPDATE jobs SET callback_token = ? WHERE id = ?", (callback_token, job_id))
+        conn.commit()
+        conn.close()
+        
+    server_url = db.get_setting("public_server_url")
+    if not server_url:
+        server_url = str(request.base_url).rstrip("/")
+        
+    db.update_job_status(job_id, 'QUEUED')
+    
+    with jobs._JOBS_LOCK:
+        job = jobs._JOBS.get(job_id)
+    if job:
+        with job._lock:
+            job.status = "queued"
+            job.stage = "queued"
+            job.message = "Dispatched manual GHA run."
+            
+    from . import github_dispatch
+    success, err_msg = github_dispatch.dispatch_workflow(job_id, callback_token, server_url)
+    if success:
+        logger.info("[%s] manually triggered GHA workflow", job_id)
+        return {"status": "success"}
+    else:
+        db.update_job_status(job_id, 'FAILED', error=f"GitHub dispatch failed: {err_msg}")
+        raise HTTPException(status_code=500, detail=f"Failed to trigger GHA: {err_msg}")
 
 # Catch-all guard: turn any unexpected error into a clean 500 (no crash).
 @app.exception_handler(Exception)
