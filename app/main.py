@@ -929,9 +929,9 @@ def get_job_config(
 @app.post("/api/jobs/{job_id}/callback")
 @app.patch("/api/jobs/{job_id}/callback")
 def job_callback(
+    request: Request,
     job_id: str,
     req: JobCallbackRequest,
-    request: Request,
     authorization: Optional[str] = Header(None),
     token: Optional[str] = Query(None)
 ) -> dict:
