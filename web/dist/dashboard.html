@@ -608,6 +608,39 @@
 
     </div>
 
+    
+    <!-- MANUAL AI EDIT GENERATION -->
+    <section class="card" style="margin-top: 30px;">
+        <div class="card-title">
+            <span>Manual AI Short Generation</span>
+        </div>
+        <div class="grid-2">
+            <div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.5;">
+                    Provide a specific YouTube video URL and an optional AI editing prompt. The AI Editing Director will follow your instructions to generate an edit plan.
+                </p>
+                <div class="form-group">
+                    <label for="manual_video_url">Video URL</label>
+                    <input type="url" id="manual_video_url" placeholder="https://www.youtube.com/watch?v=...">
+                </div>
+                <div class="form-group">
+                    <label for="manual_editing_prompt">AI Editing Prompt (Optional)</label>
+                    <textarea id="manual_editing_prompt" placeholder="e.g. Make it fast-paced, zoom in on key words, keep it under 45 seconds..." style="width: 100%; height: 80px; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; font-family: inherit; font-size: 14px;"></textarea>
+                </div>
+                <button class="btn" id="generate-manual-btn" style="background-color: var(--primary-color);">Generate Short via AI</button>
+            </div>
+            <div style="border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
+                <h3 style="font-size: 15px; margin-bottom: 10px; color: var(--text-secondary);">How it works</h3>
+                <ul style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.5; padding-left: 20px;">
+                    <li style="margin-bottom: 5px;">The pipeline downloads the video via your local agent or directly.</li>
+                    <li style="margin-bottom: 5px;">Groq Whisper creates a precise, word-level transcript.</li>
+                    <li style="margin-bottom: 5px;">The AI reads your prompt and the transcript, then mathematically computes the perfect cuts, zooms, and sound effects.</li>
+                    <li>The GitHub Actions runner physically cuts the video and uploads it to S3.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
     <!-- GENERATED SHORTS HISTORY -->
     <section class="card">
         <div class="card-title">Generated Shorts & Upload Registry</div>
@@ -1064,6 +1097,52 @@
         document.getElementById("video_storage_limit").addEventListener("input", (e) => {
             const inputLimit = parseFloat(e.target.value) || 15.0;
             updateQuotaUI(lastFetchedUsedGb, inputLimit);
+        });
+
+        
+        document.getElementById("generate-manual-btn").addEventListener("click", () => {
+            const videoUrl = document.getElementById("manual_video_url").value;
+            const prompt = document.getElementById("manual_editing_prompt").value;
+            
+            if (!videoUrl) {
+                showAlert("Please enter a Video URL.", "danger");
+                return;
+            }
+            
+            const btn = document.getElementById("generate-manual-btn");
+            const originalText = btn.innerText;
+            btn.innerText = "Initiating...";
+            btn.disabled = true;
+
+            const body = {
+                video_url: videoUrl,
+                editing_prompt: prompt || null
+            };
+
+            fetch("/api/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "error" || data.detail) {
+                    showAlert("Error: " + (data.detail || data.message), "danger");
+                } else {
+                    showAlert("Manual generation job queued successfully!", "success");
+                    document.getElementById("manual_video_url").value = "";
+                    document.getElementById("manual_editing_prompt").value = "";
+                    pollAutomationStatus();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showAlert("Failed to initiate manual generation.", "danger");
+            })
+            .finally(() => {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            });
         });
 
         document.getElementById("start-automation-btn").addEventListener("click", () => {
