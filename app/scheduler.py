@@ -74,10 +74,43 @@ class SchedulerWorker:
                             continue
                     set_setting('automation_status', 'WAITING')
                     self._check_and_enqueue_next()
+                    self._process_ready_uploads()
             except Exception as e:
                 logger.exception("Error in scheduler loop: %s", e)
                 set_setting('automation_status', 'FAILED')
             time.sleep(60)
+            
+    def _process_ready_uploads(self):
+        try:
+            import sqlite3
+            from datetime import datetime
+            from app.db import get_db
+            
+            conn = get_db()
+            cursor = conn.cursor()
+            now_str = datetime.utcnow().isoformat()
+            
+            # Find shorts ready to upload whose scheduled time has arrived or is NULL
+            cursor.execute(
+                """SELECT id FROM generated_shorts 
+                   WHERE status = 'ready' 
+                   AND (scheduled_publish_time IS NULL OR scheduled_publish_time <= ?)
+                """,
+                (now_str,)
+            )
+            rows = cursor.fetchall()
+            conn.close()
+            
+            if rows:
+                from app.youtube import upload_scheduled_short
+                import threading
+                for row in rows:
+                    short_id = row['id']
+                    logger.info("Found ready short %s scheduled for upload.", short_id)
+                    # Use a thread to avoid blocking the scheduler loop
+                    threading.Thread(target=upload_scheduled_short, args=(short_id,)).start()
+        except Exception as e:
+            logger.error("Error processing ready uploads: %s", e)
 
     def _check_and_enqueue_next(self):
 

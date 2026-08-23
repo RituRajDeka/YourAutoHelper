@@ -446,6 +446,13 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="render_mode">GHA Trigger Mode</label>
+                    <select id="render_mode">
+                        <option value="auto">Automatic (Trigger GHA after download)</option>
+                        <option value="manual">Manual (Trigger GHA from dashboard)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="downloader_mode">Downloader Mode</label>
                     <select id="downloader_mode">
                         <option value="yt-dlp">yt-dlp (Direct Download)</option>
@@ -587,11 +594,12 @@
                             <th>Type</th>
                             <th>Status</th>
                             <th>Info / Log</th>
+                            <th style="width: 120px;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="jobs-list">
                         <tr>
-                            <td colspan="4" class="empty-state">Loading active scheduler jobs...</td>
+                            <td colspan="5" class="empty-state">Loading active scheduler jobs...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -601,6 +609,8 @@
     </div>
 
     
+    
+    
     <!-- MANUAL AI EDIT GENERATION -->
     <section class="card" style="margin-top: 30px;">
         <div class="card-title">
@@ -609,16 +619,56 @@
         <div class="grid-2">
             <div>
                 <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.5;">
-                    Provide a specific YouTube video URL and an optional AI editing prompt. The AI Editing Director will follow your instructions to generate an edit plan.
+                    Provide a specific YouTube video URL and an optional AI editing prompt.
                 </p>
                 <div class="form-group">
                     <label for="manual_video_url">Video URL</label>
                     <input type="url" id="manual_video_url" placeholder="https://www.youtube.com/watch?v=...">
                 </div>
+                
+                <h4 style="font-size: 14px; margin: 15px 0 10px; color: var(--primary-color);">AI Editing Prompt</h4>
                 <div class="form-group">
-                    <label for="manual_editing_prompt">AI Editing Prompt (Optional)</label>
-                    <textarea id="manual_editing_prompt" placeholder="e.g. Make it fast-paced, zoom in on key words, keep it under 45 seconds..." style="width: 100%; height: 80px; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; font-family: inherit; font-size: 14px;"></textarea>
+                    <select id="manual_prompt_preset" style="margin-bottom: 10px; width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                        <option value="">-- Select a Style Preset --</option>
+                        <option value="Make it in the style of MrBeast. Fast-paced, high retention. Cut out all dead air. Zoom in on faces when they show excitement or shock (scale 1.3 to 1.5). Add 'pop' and 'whoosh' sound effects on fast zooms. Use dramatic background music (music_track: 'intense_background.mp3', volume: 45) that dips when people talk.">MrBeast (High Retention, Fast Paced)</option>
+                        <option value="Make it in the style of KSI/Sidemen. Funny, chaotic, reaction-heavy. Keep the best jokes. Zoom in heavily on funny reactions and add a 'vine_boom' sound effect on the punchlines. Add hype background music.">KSI / Sidemen (Comedy & Reactions)</option>
+                        <option value="Make it in the style of Alex Hormozi. Educational, engaging. Keep the flow smooth and articulate. Zoom in slightly on key business points. Keep it professional with minimal sound effects.">Alex Hormozi (Educational / Podcast)</option>
+                    </select>
+                    <textarea id="manual_editing_prompt" placeholder="e.g. Make it fast-paced, zoom in on key words..." style="width: 100%; height: 80px; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; font-family: inherit; font-size: 14px;"></textarea>
                 </div>
+
+                <h4 style="font-size: 14px; margin: 15px 0 10px; color: var(--primary-color);">Caption Styling & Position</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="manual_caption_style">Caption Style</label>
+                        <select id="manual_caption_style" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                            <option value="bold_white">Bold White (Hormozi style)</option>
+                            <option value="yellow_black">Yellow & Black (MrBeast style)</option>
+                            <option value="neon_glow">Neon Glow</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="manual_animation">Speech Highlight</label>
+                        <select id="manual_animation" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                            <option value="highlight">Highlight Active Word (Speech-to-Speech)</option>
+                            <option value="word_reveal">Word Reveal</option>
+                            <option value="one_word">One Word at a Time</option>
+                            <option value="none">No Animation</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Position (X / Y %)</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="number" id="manual_pos_x" placeholder="X (50)" min="0" max="100" style="width: 50%;">
+                            <input type="number" id="manual_pos_y" placeholder="Y (75)" min="0" max="100" style="width: 50%;">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="manual_font_scale">Text Size (Scale)</label>
+                        <input type="number" id="manual_font_scale" placeholder="1.0" step="0.1" min="0.4" max="2.5" style="width: 100%;">
+                    </div>
+                </div>
+
                 <button class="btn" id="generate-manual-btn" style="background-color: var(--primary-color);">Generate Short via AI</button>
             </div>
             <div style="border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
@@ -627,13 +677,15 @@
                     <li style="margin-bottom: 5px;">The pipeline downloads the video via your local agent or directly.</li>
                     <li style="margin-bottom: 5px;">Groq Whisper creates a precise, word-level transcript.</li>
                     <li style="margin-bottom: 5px;">The AI reads your prompt and the transcript, then mathematically computes the perfect cuts, zooms, and sound effects.</li>
-                    <li>The GitHub Actions runner physically cuts the video and uploads it to S3.</li>
+                    <li>The GitHub Actions runner physically cuts the video, applies your custom captions (style, animation, position), and uploads it to YouTube automatically!</li>
                 </ul>
             </div>
         </div>
     </section>
-
+    
     <!-- GENERATED SHORTS HISTORY -->
+
+
     <section class="card">
         <div class="card-title">Generated Shorts & Upload Registry</div>
         <div class="table-responsive">
@@ -717,6 +769,7 @@
                 document.getElementById("transcribe_device").value = settings.transcribe_device || "cpu";
                 
                 document.getElementById("run_mode").value = settings.run_mode || "local";
+                document.getElementById("render_mode").value = settings.render_mode || "auto";
                 document.getElementById("downloader_mode").value = settings.downloader_mode || "yt-dlp";
                 document.getElementById("github_token").value = settings.github_token || "";
                 document.getElementById("github_repo").value = settings.github_repo || "";
@@ -782,11 +835,16 @@
                 const tbody = document.getElementById("jobs-list");
                 tbody.innerHTML = "";
                 if (!jobs || jobs.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No active queue jobs.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No active queue jobs.</td></tr>`;
                     return;
                 }
                 jobs.forEach(job => {
                     const tr = document.createElement("tr");
+                    const status = (job.status || "PENDING").toUpperCase();
+                    let actionHtml = '<span style="color: var(--text-secondary);">—</span>';
+                    if (status === "DOWNLOADED" || status === "PENDING" || status === "FAILED" || status === "ERROR") {
+                        actionHtml = `<button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; background-color: var(--primary-color);" onclick="dispatchManualJob('${job.id}')">Render (GHA)</button>`;
+                    }
                     tr.innerHTML = `
                         <td style="font-family: monospace;">${job.id}</td>
                         <td>${job.type || 'render'}</td>
@@ -794,13 +852,14 @@
                         <td style="font-size: 13px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${job.error || ''}">
                             ${job.error || 'Running smoothly...'}
                         </td>
+                        <td>${actionHtml}</td>
                     `;
                     tbody.appendChild(tr);
                 });
             })
             .catch(err => {
                 console.error("Error loading jobs:", err);
-                document.getElementById("jobs-list").innerHTML = `<tr><td colspan="4" class="empty-state">Failed to load queue jobs.</td></tr>`;
+                document.getElementById("jobs-list").innerHTML = `<tr><td colspan="5" class="empty-state">Failed to load queue jobs.</td></tr>`;
             });
 
         // 4. Fetch generated shorts history
@@ -862,6 +921,7 @@
             youtube_client_secret: document.getElementById("youtube_client_secret").value,
             transcribe_device: document.getElementById("transcribe_device").value,
             run_mode: document.getElementById("run_mode").value,
+            render_mode: document.getElementById("render_mode").value,
             downloader_mode: document.getElementById("downloader_mode").value,
             github_token: document.getElementById("github_token").value,
             github_repo: document.getElementById("github_repo").value,
@@ -988,6 +1048,26 @@
             });
     }
 
+    // Dispatch Manual GHA Job
+    window.dispatchManualJob = function(jobId) {
+        if (!confirm("Are you sure you want to manually trigger GitHub Actions rendering for this video?")) return;
+        showAlert("Triggering manual GHA render...", "warning");
+        fetch(`/api/jobs/${jobId}/dispatch`, { method: "POST" })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    showAlert("Manual GHA render triggered successfully!");
+                    loadDashboardData();
+                } else {
+                    showAlert("Failed to trigger GHA: " + (data.detail || "unknown error"), "danger");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showAlert("Error triggering GHA.", "danger");
+            });
+    }
+
     // Upload Short Now
     window.uploadNow = function(id) {
         showAlert("Triggering manual upload...", "warning");
@@ -1064,6 +1144,22 @@
         });
 
         
+        
+        // Update prompt text area when preset changes
+        document.getElementById("manual_prompt_preset").addEventListener("change", (e) => {
+            if (e.target.value) {
+                document.getElementById("manual_editing_prompt").value = e.target.value;
+            }
+        });
+
+        
+        // Update prompt text area when preset changes
+        document.getElementById("manual_prompt_preset").addEventListener("change", (e) => {
+            if (e.target.value) {
+                document.getElementById("manual_editing_prompt").value = e.target.value;
+            }
+        });
+
         document.getElementById("generate-manual-btn").addEventListener("click", () => {
             const videoUrl = document.getElementById("manual_video_url").value;
             const prompt = document.getElementById("manual_editing_prompt").value;
@@ -1077,11 +1173,32 @@
             const originalText = btn.innerText;
             btn.innerText = "Initiating...";
             btn.disabled = true;
+            
+            // Collect caption overrides
+            const overrides = {};
+            const posX = document.getElementById("manual_pos_x").value;
+            if (posX) overrides.pos_x = parseFloat(posX);
+            
+            const posY = document.getElementById("manual_pos_y").value;
+            if (posY) overrides.pos_y = parseFloat(posY);
+            
+            const fontScale = document.getElementById("manual_font_scale").value;
+            if (fontScale) overrides.font_scale = parseFloat(fontScale);
+            
+            const animation = document.getElementById("manual_animation").value;
+            if (animation) overrides.animation = animation;
+            
+            const captionStyle = document.getElementById("manual_caption_style").value;
 
             const body = {
                 video_url: videoUrl,
-                editing_prompt: prompt || null
+                editing_prompt: prompt || null,
+                caption_style: captionStyle || "bold_white"
             };
+            
+            if (Object.keys(overrides).length > 0) {
+                body.caption_overrides = overrides;
+            }
 
             fetch("/api/generate", {
                 method: "POST",
@@ -1093,7 +1210,7 @@
                 if (data.status === "error" || data.detail) {
                     showAlert("Error: " + (data.detail || data.message), "danger");
                 } else {
-                    showAlert("Manual generation job queued successfully!", "success");
+                    showAlert("Manual generation job queued successfully! Automatic YouTube upload is active.", "success");
                     document.getElementById("manual_video_url").value = "";
                     document.getElementById("manual_editing_prompt").value = "";
                     pollAutomationStatus();
@@ -1110,6 +1227,8 @@
         });
 
         document.getElementById("start-automation-btn").addEventListener("click", () => {
+
+
             fetch("/api/automation/start", { method: "POST" })
                 .then(res => res.json())
                 .then(data => {
