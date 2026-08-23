@@ -46,7 +46,7 @@ def sync_channels(max_results: int = 5) -> int:
                     video_url = entry.get('url') or f"https://www.youtube.com/watch?v={video_id}"
                     title = entry.get('title') or f"Video {video_id}"
                     
-                    if not video_id:
+                    if not video_id or (video_id.startswith("UC") and len(video_id) >= 24):
                         continue
                         
                     # Add to database if not exists
