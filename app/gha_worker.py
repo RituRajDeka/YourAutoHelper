@@ -138,6 +138,10 @@ def main():
         source_video_id = config.get("source_video", {}).get("source_video_id")
         
         s3_settings = config.get("s3_settings", {})
+        for k, v in s3_settings.items():
+            if v:
+                from app import db
+                db.set_setting(k, v)
         use_s3_source = False
         s3_bucket = s3_settings.get("s3_bucket_name")
         s3_key = None
