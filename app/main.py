@@ -539,6 +539,7 @@ class AddChannelRequest(BaseModel):
 
 class UpdateSettingsRequest(BaseModel):
     shorts_per_day: Optional[int] = None
+    publish_times: Optional[str] = None
     buffer_days: Optional[int] = None
     youtube_client_id: Optional[str] = None
     youtube_client_secret: Optional[str] = None
@@ -618,6 +619,7 @@ def get_settings() -> dict:
         buffer_days_str = db.get_setting("buffer_days")
         
         shorts_per_day = int(shorts_per_day_str) if shorts_per_day_str is not None else 3
+        publish_times = db.get_setting("publish_times") or ""
         buffer_days = int(buffer_days_str) if buffer_days_str is not None else 2
         
         youtube_client_id = db.get_setting("youtube_client_id") or ""
@@ -629,6 +631,7 @@ def get_settings() -> dict:
         
         return {
             "shorts_per_day": shorts_per_day,
+            "publish_times": publish_times,
             "buffer_days": buffer_days,
             "youtube_client_id": youtube_client_id,
             "youtube_client_secret": youtube_client_secret,
@@ -669,6 +672,8 @@ def update_settings(req: UpdateSettingsRequest) -> dict:
             
         if req.shorts_per_day is not None:
             set_fn("shorts_per_day", req.shorts_per_day)
+        if req.publish_times is not None:
+            set_fn("publish_times", req.publish_times)
         if req.buffer_days is not None:
             set_fn("buffer_days", req.buffer_days)
         if req.youtube_client_id is not None:

@@ -384,10 +384,12 @@ class SchedulerWorker:
 
     def _calculate_next_slot(self) -> datetime:
         """
-        Calculates the next available publication slot timestamp based on shorts_per_day setting.
+        Calculates the next available publication slot timestamp based on publish_times or shorts_per_day.
         """
-        shorts_per_day = get_setting('shorts_per_day', 3)
-        interval_hours = 24.0 / shorts_per_day
+        now = datetime.utcnow()
+        
+        # Get publish_times from settings
+        publish_times_str = get_setting('publish_times', '')
         
         # Check database for latest scheduled publish time
         conn = clipper.Path(clipper.CLIPS_DIR).parent / 'shorts_factory.db'
@@ -403,14 +405,54 @@ class SchedulerWorker:
         row = cursor.fetchone()
         db_conn.close()
         
-        now = datetime.utcnow()
+        latest = now
         if row and row['max_time']:
             try:
-                latest = datetime.fromisoformat(row['max_time'])
-                if latest > now:
-                    return latest + timedelta(hours=interval_hours)
+                dt = datetime.fromisoformat(row['max_time'])
+                if dt > latest:
+                    latest = dt
             except Exception:
                 pass
                 
-        # Fallback if no future scheduled shorts: schedule for now + 1 hour
-        return now + timedelta(hours=1.0)
+        # If specific publish times are configured, use them
+        if publish_times_str and publish_times_str.strip():
+            times = []
+            for t in publish_times_str.split(','):
+                t = t.strip()
+                if not t: continue
+                # Parse HH:MM
+                parts = t.split(':')
+                if len(parts) >= 2:
+                    try:
+                        times.append((int(parts[0]), int(parts[1])))
+                    except ValueError:
+                        pass
+            
+            if times:
+                # Sort times
+                times.sort()
+                
+                # Check if latest matches any of our times (approx)
+                current_day = latest.replace(hour=0, minute=0, second=0, microsecond=0)
+                
+                # Find the next time slot after 'latest'
+                for h, m in times:
+                    candidate = current_day.replace(hour=h, minute=m)
+                    if candidate > latest:
+                        return candidate
+                        
+                # If we exhausted all slots today, return the first slot tomorrow
+                return current_day + timedelta(days=1) + timedelta(hours=times[0][0], minutes=times[0][1])
+
+        # Fallback to simple interval based on shorts_per_day
+        try:
+            shorts_per_day = int(get_setting('shorts_per_day', 3))
+            if shorts_per_day <= 0: shorts_per_day = 3
+        except Exception:
+            shorts_per_day = 3
+            
+        interval_hours = 24.0 / shorts_per_day
+        
+        if latest == now:
+            return now + timedelta(hours=1.0)
+        return latest + timedelta(hours=interval_hours)

@@ -409,9 +409,13 @@
                         <input type="number" id="shorts_per_day" min="1" max="10" value="3">
                     </div>
                     <div class="form-group">
-                        <label for="buffer_days">Buffer Days</label>
-                        <input type="number" id="buffer_days" min="1" max="7" value="2">
+                        <label for="publish_times">Publish Times (e.g. 09:00, 15:00)</label>
+                        <input type="text" id="publish_times" placeholder="Auto-calculated if blank">
                     </div>
+                </div>
+                <div class="form-group">
+                    <label for="buffer_days">Buffer Days (Target Queue)</label>
+                    <input type="number" id="buffer_days" min="1" max="7" value="2">
                 </div>
                 <div class="form-group">
                     <label for="transcribe_device">Transcribe Device</label>
@@ -638,34 +642,62 @@
                 </div>
 
                 <h4 style="font-size: 14px; margin: 15px 0 10px; color: var(--primary-color);">Caption Styling & Position</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label for="manual_caption_style">Caption Style</label>
-                        <select id="manual_caption_style" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
-                            <option value="bold_white">Bold White (Hormozi style)</option>
-                            <option value="yellow_black">Yellow & Black (MrBeast style)</option>
-                            <option value="neon_glow">Neon Glow</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label for="manual_animation">Speech Highlight</label>
-                        <select id="manual_animation" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
-                            <option value="highlight">Highlight Active Word (Speech-to-Speech)</option>
-                            <option value="word_reveal">Word Reveal</option>
-                            <option value="one_word">One Word at a Time</option>
-                            <option value="none">No Animation</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Position (X / Y %)</label>
-                        <div style="display: flex; gap: 5px;">
-                            <input type="number" id="manual_pos_x" placeholder="X (50)" min="0" max="100" style="width: 50%;">
-                            <input type="number" id="manual_pos_y" placeholder="Y (75)" min="0" max="100" style="width: 50%;">
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; margin-bottom: 15px;">
+                    <!-- Canvas Preview -->
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <div id="preview-container" style="position: relative; width: 180px; height: 320px; background-color: #222f4c; border-radius: 8px; overflow: hidden; border: 2px dashed #4b5563; cursor: grab; user-select: none;">
+                            <div style="position: absolute; top: 10px; left: 10px; right: 10px; text-align: center; color: #8e9ebb; font-size: 10px; font-family: monospace;">Simulated Video (9:16)</div>
+                            
+                            <!-- Draggable Text -->
+                            <div id="preview-text" style="position: absolute; top: 75%; left: 50%; transform: translate(-50%, -50%) scale(1.0); font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 16px; white-space: nowrap; cursor: move; text-shadow: 2px 2px 0px rgba(0,0,0,0.8); pointer-events: auto;">
+                                <span style="color: #ffffff;">SAMPLE</span> <span id="preview-highlight" style="color: #ffff00;">TEXT</span>
+                            </div>
                         </div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 5px; text-align: center;">Drag to position. Scroll to resize.</div>
                     </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label for="manual_font_scale">Text Size (Scale)</label>
-                        <input type="number" id="manual_font_scale" placeholder="1.0" step="0.1" min="0.4" max="2.5" style="width: 100%;">
+                    
+                    <!-- Controls -->
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="manual_caption_style">Caption Style</label>
+                            <select id="manual_caption_style" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                                <option value="bold_white">Bold White (Hormozi style)</option>
+                                <option value="yellow_black">Yellow & Black (MrBeast style)</option>
+                                <option value="neon_glow">Neon Glow</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="manual_animation">Speech Highlight</label>
+                            <select id="manual_animation" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                                <option value="highlight">Highlight Active Word (Speech-to-Speech)</option>
+                                <option value="word_reveal">Word Reveal</option>
+                                <option value="one_word">One Word at a Time</option>
+                                <option value="none">No Animation</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Base Color</label>
+                                <input type="color" id="manual_primary_color" value="#ffffff" style="width: 100%; height: 30px; border: none; border-radius: 4px; background: transparent; cursor: pointer;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Highlight Color</label>
+                                <input type="color" id="manual_highlight_color" value="#ffff00" style="width: 100%; height: 30px; border: none; border-radius: 4px; background: transparent; cursor: pointer;">
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Position (X / Y %)</label>
+                            <div style="display: flex; gap: 5px;">
+                                <input type="number" id="manual_pos_x" value="50" min="0" max="100" style="width: 50%;">
+                                <input type="number" id="manual_pos_y" value="75" min="0" max="100" style="width: 50%;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="manual_font_scale">Text Size (Scale)</label>
+                            <input type="number" id="manual_font_scale" value="1.0" step="0.1" min="0.4" max="2.5" style="width: 100%;">
+                        </div>
                     </div>
                 </div>
 
@@ -763,6 +795,7 @@
             .then(res => res.json())
             .then(settings => {
                 document.getElementById("shorts_per_day").value = settings.shorts_per_day || 3;
+                document.getElementById("publish_times").value = settings.publish_times || "";
                 document.getElementById("buffer_days").value = settings.buffer_days || 2;
                 document.getElementById("youtube_client_id").value = settings.youtube_client_id || "";
                 document.getElementById("youtube_client_secret").value = settings.youtube_client_secret || "";
@@ -916,6 +949,7 @@
     document.getElementById("save-settings-btn").addEventListener("click", () => {
         const body = {
             shorts_per_day: parseInt(document.getElementById("shorts_per_day").value),
+            publish_times: document.getElementById("publish_times").value,
             buffer_days: parseInt(document.getElementById("buffer_days").value),
             youtube_client_id: document.getElementById("youtube_client_id").value,
             youtube_client_secret: document.getElementById("youtube_client_secret").value,
@@ -1160,6 +1194,78 @@
             }
         });
 
+        
+        // --- Canvas Interactive Preview Logic ---
+        const previewContainer = document.getElementById("preview-container");
+        const previewText = document.getElementById("preview-text");
+        const previewHighlight = document.getElementById("preview-highlight");
+        
+        const inputPosX = document.getElementById("manual_pos_x");
+        const inputPosY = document.getElementById("manual_pos_y");
+        const inputFontScale = document.getElementById("manual_font_scale");
+        const inputPrimaryColor = document.getElementById("manual_primary_color");
+        const inputHighlightColor = document.getElementById("manual_highlight_color");
+        
+        function updateCanvasTransform() {
+            previewText.style.left = inputPosX.value + "%";
+            previewText.style.top = inputPosY.value + "%";
+            previewText.style.transform = 	ranslate(-50%, -50%) scale();
+            
+            // Apply colors
+            previewText.children[0].style.color = inputPrimaryColor.value;
+            previewHighlight.style.color = inputHighlightColor.value;
+        }
+
+        // Draggable Logic
+        let isDragging = false;
+        previewText.addEventListener("mousedown", (e) => {
+            isDragging = true;
+            previewContainer.style.cursor = "grabbing";
+            e.preventDefault();
+        });
+        document.addEventListener("mouseup", () => {
+            isDragging = false;
+            previewContainer.style.cursor = "grab";
+        });
+        document.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+            const rect = previewContainer.getBoundingClientRect();
+            let xPos = ((e.clientX - rect.left) / rect.width) * 100;
+            let yPos = ((e.clientY - rect.top) / rect.height) * 100;
+            
+            xPos = Math.max(0, Math.min(100, xPos));
+            yPos = Math.max(0, Math.min(100, yPos));
+            
+            inputPosX.value = xPos.toFixed(1);
+            inputPosY.value = yPos.toFixed(1);
+            updateCanvasTransform();
+        });
+
+        // Scroll to Resize
+        previewContainer.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            let scale = parseFloat(inputFontScale.value);
+            if (e.deltaY < 0) {
+                scale += 0.1;
+            } else {
+                scale -= 0.1;
+            }
+            scale = Math.max(0.4, Math.min(2.5, scale));
+            inputFontScale.value = scale.toFixed(1);
+            updateCanvasTransform();
+        });
+
+        // Input Observers
+        inputPosX.addEventListener("input", updateCanvasTransform);
+        inputPosY.addEventListener("input", updateCanvasTransform);
+        inputFontScale.addEventListener("input", updateCanvasTransform);
+        inputPrimaryColor.addEventListener("input", updateCanvasTransform);
+        inputHighlightColor.addEventListener("input", updateCanvasTransform);
+        
+        // Initial setup
+        updateCanvasTransform();
+        // ----------------------------------------
+
         document.getElementById("generate-manual-btn").addEventListener("click", () => {
             const videoUrl = document.getElementById("manual_video_url").value;
             const prompt = document.getElementById("manual_editing_prompt").value;
@@ -1189,6 +1295,13 @@
             if (animation) overrides.animation = animation;
             
             const captionStyle = document.getElementById("manual_caption_style").value;
+            
+            if (document.getElementById("manual_primary_color").value !== "#ffffff") {
+                overrides.primary_color = document.getElementById("manual_primary_color").value;
+            }
+            if (document.getElementById("manual_highlight_color").value !== "#ffff00") {
+                overrides.highlight_color = document.getElementById("manual_highlight_color").value;
+            }
 
             const body = {
                 video_url: videoUrl,
