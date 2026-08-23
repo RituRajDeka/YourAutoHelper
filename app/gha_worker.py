@@ -58,13 +58,17 @@ def main():
             "Content-Type": "application/json"
         }
         logger.info("Sending callback: status=%s, progress=%.2f, message=%s", status, progress, message)
-        # Attempt PATCH first, fall back to POST
+        # Attempt POST first, fall back to PATCH
         try:
-            resp = requests.patch(url, headers=headers, json=payload, timeout=15)
+            resp = requests.post(url, headers=headers, json=payload, timeout=15)
+            if resp.status_code >= 400:
+                logger.error(f"POST failed with status {resp.status_code}: {resp.text}")
             resp.raise_for_status()
         except Exception as e:
-            logger.warning("PATCH callback failed, trying POST: %s", e)
-            resp = requests.post(url, headers=headers, json=payload, timeout=15)
+            logger.warning("POST callback failed, trying PATCH: %s", e)
+            resp = requests.patch(url, headers=headers, json=payload, timeout=15)
+            if resp.status_code >= 400:
+                logger.error(f"PATCH failed with status {resp.status_code}: {resp.text}")
             resp.raise_for_status()
 
     try:

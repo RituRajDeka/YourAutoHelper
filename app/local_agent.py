@@ -123,17 +123,21 @@ def report_progress(
     }
     logger.info("Sending callback: status=%s, progress=%.1f%%, message=%s", status, progress, message)
     
-    # Try PATCH first, fallback to POST
+    # Try POST first, fallback to PATCH
     try:
-        resp = requests.patch(url, headers=headers, json=payload, timeout=15)
+        resp = requests.post(url, headers=headers, json=payload, timeout=15)
+        if resp.status_code >= 400:
+            logger.error(f"POST failed with status {resp.status_code}: {resp.text}")
         resp.raise_for_status()
-    except Exception as patch_err:
-        logger.warning("PATCH callback failed, trying POST: %s", patch_err)
+    except Exception as post_err:
+        logger.warning("POST callback failed, trying PATCH: %s", post_err)
         try:
-            resp = requests.post(url, headers=headers, json=payload, timeout=15)
+            resp = requests.patch(url, headers=headers, json=payload, timeout=15)
+            if resp.status_code >= 400:
+                logger.error(f"PATCH failed with status {resp.status_code}: {resp.text}")
             resp.raise_for_status()
-        except Exception as post_err:
-            logger.error("Callback POST also failed: %s", post_err)
+        except Exception as patch_err:
+            logger.error("Callback PATCH also failed: %s", patch_err)
 
 
 def process_job(server_url: str, token: str, job: dict) -> None:
