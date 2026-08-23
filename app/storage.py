@@ -55,10 +55,13 @@ class S3StorageProvider(StorageProvider):
             client_kwargs['region_name'] = region_name
             
         # Configure client to avoid chunked encoding issues (MissingContentLength) on S3-compatible endpoints
-        client_kwargs['config'] = Config(
-            request_checksum_calculation="when_required",
-            response_checksum_validation="when_required"
-        )
+        try:
+            client_kwargs['config'] = Config(
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required"
+            )
+        except TypeError:
+            client_kwargs['config'] = Config()
             
         self.s3_client = boto3.client('s3', **client_kwargs)
 
