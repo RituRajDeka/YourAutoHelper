@@ -31,6 +31,8 @@ def main():
     job_id = args.job_id
     callback_token = args.callback_token
     server_url = args.server_url.rstrip("/")
+    if server_url.startswith("http://") and "localhost" not in server_url and "127.0.0.1" not in server_url:
+        server_url = server_url.replace("http://", "https://", 1)
 
     # Progress callback helper
     def report_progress(

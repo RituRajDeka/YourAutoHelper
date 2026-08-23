@@ -553,6 +553,8 @@ def main() -> None:
     poll_interval = args.poll_interval
     
     server_url = server_url.rstrip("/")
+    if server_url.startswith("http://") and "localhost" not in server_url and "127.0.0.1" not in server_url:
+        server_url = server_url.replace("http://", "https://", 1)
     
     if not token:
         logger.critical("GitHub Token is required. Pass --token or set CLIPFORGE_GITHUB_TOKEN.")
