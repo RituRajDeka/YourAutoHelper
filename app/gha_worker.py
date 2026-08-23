@@ -155,11 +155,16 @@ def main():
                 s3_client_kwargs['region_name'] = s3_settings["s3_region"]
             if s3_settings.get("s3_endpoint_url"):
                 from botocore.client import Config as BotoConfig
-                s3_client_kwargs['config'] = BotoConfig(
-                    signature_version='s3v4',
-                    request_checksum_calculation="when_required",
-                    response_checksum_validation="when_required"
-                )
+                try:
+                    s3_client_kwargs['config'] = BotoConfig(
+                        signature_version='s3v4',
+                        request_checksum_calculation="when_required",
+                        response_checksum_validation="when_required"
+                    )
+                except TypeError:
+                    s3_client_kwargs['config'] = BotoConfig(
+                        signature_version='s3v4'
+                    )
                 
             try:
                 import boto3
@@ -204,11 +209,16 @@ def main():
             if s3_settings.get("s3_region"):
                 s3_client_kwargs['region_name'] = s3_settings["s3_region"]
             if s3_settings.get("s3_endpoint_url"):
-                s3_client_kwargs['config'] = BotoConfig(
-                    signature_version='s3v4',
-                    request_checksum_calculation="when_required",
-                    response_checksum_validation="when_required"
-                )
+                try:
+                    s3_client_kwargs['config'] = BotoConfig(
+                        signature_version='s3v4',
+                        request_checksum_calculation="when_required",
+                        response_checksum_validation="when_required"
+                    )
+                except TypeError:
+                    s3_client_kwargs['config'] = BotoConfig(
+                        signature_version='s3v4'
+                    )
                 
             s3_client = boto3.client('s3', **s3_client_kwargs)
             s3_client.download_file(s3_bucket, s3_key, str(source_path))

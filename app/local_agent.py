@@ -306,10 +306,13 @@ def process_job(server_url: str, token: str, job: dict) -> None:
         s3_client_kwargs['region_name'] = s3_settings["s3_region"]
 
     # Disable default checksum calculation to prevent chunked encoding (MissingContentLength) on S3-compatible endpoints
-    s3_client_kwargs['config'] = Config(
-        request_checksum_calculation="when_required",
-        response_checksum_validation="when_required"
-    )
+    try:
+        s3_client_kwargs['config'] = Config(
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required"
+        )
+    except TypeError:
+        s3_client_kwargs['config'] = Config()
 
     try:
         s3_client = boto3.client('s3', **s3_client_kwargs)
