@@ -130,7 +130,7 @@ def _try_groq(prompt, response_model, system_prompt, temperature):
     opts: dict[str, Any] = {}
     if response_model:
         opts["response_format"] = {"type": "json_object"}
-    for model in ("llama-3.1-70b-versatile", "llama3-8b-8192"):
+    for model in ("llama-3.3-70b-versatile", "llama-3.1-8b-instant"):
         try:
             logger.info("OmniRoute[groq]: model=%s", model)
             cc = client.chat.completions.create(
