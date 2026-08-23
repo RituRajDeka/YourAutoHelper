@@ -180,6 +180,37 @@ class SchedulerWorker:
             callback_token = secrets.token_hex(16)
             job_id = uuid.uuid4().hex
             
+            # Get global caption styling from settings
+            global_style = get_setting('global_caption_style', 'bold_white')
+            
+            overrides = {}
+            anim = get_setting('global_animation')
+            if anim: overrides['animation'] = anim
+            
+            p_color = get_setting('global_primary_color')
+            if p_color: overrides['primary_color'] = p_color
+            
+            h_color = get_setting('global_highlight_color')
+            if h_color: overrides['highlight_color'] = h_color
+            
+            try:
+                pos_x = get_setting('global_pos_x')
+                if pos_x is not None: overrides['pos_x'] = float(pos_x)
+            except (ValueError, TypeError):
+                pass
+                
+            try:
+                pos_y = get_setting('global_pos_y')
+                if pos_y is not None: overrides['pos_y'] = float(pos_y)
+            except (ValueError, TypeError):
+                pass
+                
+            try:
+                font_scale = get_setting('global_font_scale')
+                if font_scale is not None: overrides['font_scale'] = float(font_scale)
+            except (ValueError, TypeError):
+                pass
+
             # Construct default GenerateRequest
             req = GenerateRequest(
                 video_url=next_video['url'],
@@ -187,7 +218,8 @@ class SchedulerWorker:
                 fit_mode=FitMode.CROP,
                 num_clips=3,
                 clip_length=30,
-                caption_style="bold_white"
+                caption_style=global_style,
+                caption_overrides=overrides if overrides else None
             )
             req_json = req.model_dump_json()
             
@@ -308,16 +340,48 @@ class SchedulerWorker:
             
             mapped_words = map_transcript_to_composed(words, edit_plan, source_duration)
             
+            # Get global caption styling from settings
+            global_style = get_setting('global_caption_style', 'bold_white')
+            
+            overrides = {}
+            anim = get_setting('global_animation')
+            if anim: overrides['animation'] = anim
+            
+            p_color = get_setting('global_primary_color')
+            if p_color: overrides['primary_color'] = p_color
+            
+            h_color = get_setting('global_highlight_color')
+            if h_color: overrides['highlight_color'] = h_color
+            
+            try:
+                pos_x = get_setting('global_pos_x')
+                if pos_x is not None: overrides['pos_x'] = float(pos_x)
+            except (ValueError, TypeError):
+                pass
+                
+            try:
+                pos_y = get_setting('global_pos_y')
+                if pos_y is not None: overrides['pos_y'] = float(pos_y)
+            except (ValueError, TypeError):
+                pass
+                
+            try:
+                font_scale = get_setting('global_font_scale')
+                if font_scale is not None: overrides['font_scale'] = float(font_scale)
+            except (ValueError, TypeError):
+                pass
+
             ass_path = clip_dir / "0.ass"
             width, height = 1080, 1920  # standard portrait
             
             captions.build_ass(
                 words=mapped_words,
-                style_preset="bold_white",
+                style_preset=global_style,
                 video_w=width,
                 video_h=height,
                 out_path=ass_path,
                 clip_start=0.0,
+                overrides=overrides,
                 fit_mode="crop"
             )
             

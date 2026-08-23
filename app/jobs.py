@@ -95,6 +95,21 @@ class Job:
         self._lock = threading.Lock()
         self._rev = 0  # bumped on every change so the SSE stream only sends diffs
 
+    def _update_db(self, clips = None) -> None:
+        try:
+            from app import db
+            # Check if job exists in SQLite DB first
+            if db.get_job(self.id):
+                db.update_job_from_callback(
+                    job_id=self.id,
+                    status=self.status.upper(),
+                    progress=int(self.progress * 100),
+                    error=self.error,
+                    clips=clips
+                )
+        except Exception as e:
+            pass
+
     def cancel(self) -> None:
         """Flag the run for cancellation; the pipeline stops at the next checkpoint."""
         with self._lock:
@@ -105,6 +120,7 @@ class Job:
             self.stage = "cancelled"
             self.message = "Cancelled."
             self._rev += 1
+        self._update_db()
 
     # -- mutation ---------------------------------------------------------- #
     def set_stage(self, stage: str, frac: float, message: str) -> None:
@@ -118,6 +134,7 @@ class Job:
             self.progress = lo + frac * (hi - lo)
             self.message = message
             self._rev += 1
+        self._update_db()
 
     def add_clip(self, clip: dict) -> None:
         """Publish a finished clip so the UI can show it before the run ends."""
@@ -134,6 +151,7 @@ class Job:
             self.message = f"Done - {len(clips)} clip(s) ready."
             self.clips = clips
             self._rev += 1
+        self._update_db(clips)
 
     def fail(self, message: str) -> None:
         with self._lock:
@@ -142,6 +160,8 @@ class Job:
             self.error = message
             self.message = message
             self._rev += 1
+        self._update_db()
+        self._update_db()
 
     # -- read -------------------------------------------------------------- #
     def snapshot(self) -> dict:
@@ -382,6 +402,19 @@ def _run_pipeline(job: Job) -> None:
         )
 
         # 3) Select clips (local heuristic, optional local Ollama).
+        if req.editing_prompt and not req.edit_plan:
+            job.set_stage("selecting", 0.5, "Generating AI Edit Plan from prompt...")
+            from app.director import generate_edit_plan_from_prompt
+            try:
+                ai_plan = generate_edit_plan_from_prompt(
+                    user_prompt=req.editing_prompt,
+                    transcript=transcript,
+                    video_title=req.upload_name or source_mp4.stem
+                )
+                req.edit_plan = ai_plan.model_dump()
+            except Exception as e:
+                logger.error("Failed to generate edit plan from prompt: %s", e)
+
         if req.edit_plan:
             from .edit_plan import EditPlan
             from .plan_executor import get_composed_duration

@@ -424,6 +424,45 @@
                         <option value="cuda">GPU (CUDA)</option>
                     </select>
                 </div>
+                <h4 style="font-size: 14px; margin: 20px 0 10px; color: var(--primary-color);">Global Default Caption Styling</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="global_caption_style">Caption Style</label>
+                        <select id="global_caption_style" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                            <option value="bold_white">Bold White (Hormozi style)</option>
+                            <option value="yellow_black">Yellow & Black (MrBeast style)</option>
+                            <option value="neon_glow">Neon Glow</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="global_animation">Speech Highlight</label>
+                        <select id="global_animation" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                            <option value="highlight">Highlight Active Word</option>
+                            <option value="word_reveal">Word Reveal</option>
+                            <option value="one_word">One Word at a Time</option>
+                            <option value="none">No Animation</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Base Color</label>
+                        <input type="color" id="global_primary_color" value="#ffffff" style="width: 100%; height: 30px; border: none; border-radius: 4px; background: transparent; cursor: pointer;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Highlight Color</label>
+                        <input type="color" id="global_highlight_color" value="#ffff00" style="width: 100%; height: 30px; border: none; border-radius: 4px; background: transparent; cursor: pointer;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Position (X / Y %)</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="number" id="global_pos_x" placeholder="X (50)" min="0" max="100" style="width: 50%;">
+                            <input type="number" id="global_pos_y" placeholder="Y (75)" min="0" max="100" style="width: 50%;">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="global_font_scale">Text Size (Scale)</label>
+                        <input type="number" id="global_font_scale" placeholder="1.0" step="0.1" min="0.4" max="2.5" style="width: 100%;">
+                    </div>
+                </div>
                 <button class="btn" id="save-settings-btn">Save Configuration</button>
             </div>
             <div style="border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
@@ -796,6 +835,13 @@
             .then(settings => {
                 document.getElementById("shorts_per_day").value = settings.shorts_per_day || 3;
                 document.getElementById("publish_times").value = settings.publish_times || "";
+                document.getElementById("global_caption_style").value = settings.global_caption_style || "bold_white";
+                document.getElementById("global_animation").value = settings.global_animation || "highlight";
+                document.getElementById("global_primary_color").value = settings.global_primary_color || "#ffffff";
+                document.getElementById("global_highlight_color").value = settings.global_highlight_color || "#ffff00";
+                document.getElementById("global_pos_x").value = settings.global_pos_x !== undefined ? settings.global_pos_x : "";
+                document.getElementById("global_pos_y").value = settings.global_pos_y !== undefined ? settings.global_pos_y : "";
+                document.getElementById("global_font_scale").value = settings.global_font_scale !== undefined ? settings.global_font_scale : "";
                 document.getElementById("buffer_days").value = settings.buffer_days || 2;
                 document.getElementById("youtube_client_id").value = settings.youtube_client_id || "";
                 document.getElementById("youtube_client_secret").value = settings.youtube_client_secret || "";
@@ -950,6 +996,13 @@
         const body = {
             shorts_per_day: parseInt(document.getElementById("shorts_per_day").value),
             publish_times: document.getElementById("publish_times").value,
+            global_caption_style: document.getElementById("global_caption_style").value,
+            global_animation: document.getElementById("global_animation").value,
+            global_primary_color: document.getElementById("global_primary_color").value,
+            global_highlight_color: document.getElementById("global_highlight_color").value,
+            global_pos_x: document.getElementById("global_pos_x").value ? parseFloat(document.getElementById("global_pos_x").value) : null,
+            global_pos_y: document.getElementById("global_pos_y").value ? parseFloat(document.getElementById("global_pos_y").value) : null,
+            global_font_scale: document.getElementById("global_font_scale").value ? parseFloat(document.getElementById("global_font_scale").value) : null,
             buffer_days: parseInt(document.getElementById("buffer_days").value),
             youtube_client_id: document.getElementById("youtube_client_id").value,
             youtube_client_secret: document.getElementById("youtube_client_secret").value,

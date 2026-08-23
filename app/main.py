@@ -448,7 +448,51 @@ def generate(req: GenerateRequest, request: Request) -> dict:
 
     else:
         # local run: run the legacy background thread runner
-        job = jobs.create_job(req)
+        # BUT we write it to the DB so it is visible on the dashboard!
+        callback_token = secrets.token_hex(16)
+        job_id = uuid.uuid4().hex
+        
+        # Derive source_video_id
+        if req.upload_id:
+            source_video_id = req.upload_id
+            db.add_source_video(
+                video_id=source_video_id,
+                url=req.video_url or f"upload://{req.upload_id}",
+                channel_url="upload",
+                title=req.upload_name or "Uploaded Video",
+                status='downloaded'
+            )
+        elif req.video_url:
+            import re
+            yt_match = re.search(r'(?:v=|\/shorts\/|\/embed\/|\/v\/|youtu\.be\/|\/watch\?v=|&v=)([^#\&\?]{11})', req.video_url)
+            if yt_match:
+                source_video_id = yt_match.group(1)
+            else:
+                source_video_id = hashlib.md5(req.video_url.encode('utf-8')).hexdigest()
+            db.add_source_video(
+                video_id=source_video_id,
+                url=req.video_url,
+                channel_url="url",
+                title="YouTube Video" if yt_match else "Remote URL Video",
+                status='new'
+            )
+        else:
+            raise HTTPException(status_code=400, detail="Either upload_id or video_url is required.")
+
+        db.add_job(
+            job_id=job_id,
+            source_video_id=source_video_id,
+            status='PENDING',
+            request_json=req.model_dump_json(),
+            callback_token=callback_token,
+            edit_plan_json=json.dumps(req.edit_plan) if req.edit_plan else None
+        )
+        
+        job = jobs.Job(req)
+        job.id = job_id
+        with jobs._JOBS_LOCK:
+            jobs._JOBS[job_id] = job
+            
         jobs.start_job(job)
         logger.info("[%s] local job accepted", job.id)
         return {"job_id": job.id}
@@ -561,6 +605,13 @@ class UpdateSettingsRequest(BaseModel):
     youtube_cookies: Optional[str] = None
     video_storage_limit: Optional[int] = None
     render_mode: Optional[str] = None
+    global_caption_style: Optional[str] = None
+    global_animation: Optional[str] = None
+    global_primary_color: Optional[str] = None
+    global_highlight_color: Optional[str] = None
+    global_pos_x: Optional[float] = None
+    global_pos_y: Optional[float] = None
+    global_font_scale: Optional[float] = None
 
 
 
@@ -655,7 +706,14 @@ def get_settings() -> dict:
             "public_server_url": db.get_setting("public_server_url") or "",
             "youtube_cookies": db.get_setting("youtube_cookies") or "",
             "video_storage_limit": int(db.get_setting("video_storage_limit") or 15),
-            "render_mode": db.get_setting("render_mode") or "auto"
+            "render_mode": db.get_setting("render_mode") or "auto",
+            "global_caption_style": db.get_setting("global_caption_style") or "bold_white",
+            "global_animation": db.get_setting("global_animation") or "highlight",
+            "global_primary_color": db.get_setting("global_primary_color") or "#ffffff",
+            "global_highlight_color": db.get_setting("global_highlight_color") or "#ffff00",
+            "global_pos_x": float(db.get_setting("global_pos_x")) if db.get_setting("global_pos_x") else None,
+            "global_pos_y": float(db.get_setting("global_pos_y")) if db.get_setting("global_pos_y") else None,
+            "global_font_scale": float(db.get_setting("global_font_scale")) if db.get_setting("global_font_scale") else None
         }
 
 
@@ -718,6 +776,20 @@ def update_settings(req: UpdateSettingsRequest) -> dict:
             set_fn("video_storage_limit", req.video_storage_limit)
         if req.render_mode is not None:
             set_fn("render_mode", req.render_mode)
+        if req.global_caption_style is not None:
+            set_fn("global_caption_style", req.global_caption_style)
+        if req.global_animation is not None:
+            set_fn("global_animation", req.global_animation)
+        if req.global_primary_color is not None:
+            set_fn("global_primary_color", req.global_primary_color)
+        if req.global_highlight_color is not None:
+            set_fn("global_highlight_color", req.global_highlight_color)
+        if req.global_pos_x is not None:
+            set_fn("global_pos_x", req.global_pos_x)
+        if req.global_pos_y is not None:
+            set_fn("global_pos_y", req.global_pos_y)
+        if req.global_font_scale is not None:
+            set_fn("global_font_scale", req.global_font_scale)
             
         return {"status": "success"}
     except Exception as e:
@@ -753,6 +825,12 @@ def get_automation_status(request: Request) -> dict:
     try:
         status = db.get_setting("automation_status", "IDLE")
         last_job = db.get_last_job_info()
+        
+        # Override status if a manual or automatic job is actively running in the background
+        if last_job:
+            job_status = (last_job.get("status") or "").upper()
+            if job_status not in ("SUCCESS", "COMPLETED", "FAILED", "CANCELLED", "ERROR", "READY", "DONE"):
+                status = job_status
         last_published = db.get_last_published_short()
         
         return {
