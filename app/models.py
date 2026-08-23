@@ -329,6 +329,10 @@ class GenerateRequest(BaseModel):
         default=Device.AUTO,
         description="Compute device for transcription: auto, cuda (GPU), or cpu.",
     )
+    editing_prompt: Optional[str] = Field(
+        default=None,
+        description="Natural language prompt for AI Editing Director.",
+    )
     edit_plan: Optional[dict] = Field(
         default=None,
         description="Structured EditPlan JSON dictionary to apply custom cuts, zooms, speed changes, sfx.",

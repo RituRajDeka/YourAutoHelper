@@ -266,6 +266,21 @@ def main():
 
         # Step 4: Analyze / Select Step
         report_progress("selecting", 72.0, "Analyzing transcript...")
+        
+        # If user supplied a prompt but no pre-baked edit plan, generate it now using the new transcript
+        if req.editing_prompt and not edit_plan_data:
+            report_progress("selecting", 72.5, "Generating AI Edit Plan from prompt...")
+            from app.director import generate_edit_plan_from_prompt
+            try:
+                ai_plan = generate_edit_plan_from_prompt(
+                    user_prompt=req.editing_prompt,
+                    transcript=transcript,
+                    video_title=req.upload_name or source_id
+                )
+                edit_plan_data = ai_plan.model_dump()
+            except Exception as e:
+                logger.error("Failed to generate edit plan from prompt: %s", e)
+
         if edit_plan_data:
             from app.edit_plan import EditPlan
             from app.plan_executor import get_composed_duration
