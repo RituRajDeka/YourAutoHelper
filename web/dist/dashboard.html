@@ -1209,7 +1209,7 @@
         function updateCanvasTransform() {
             previewText.style.left = inputPosX.value + "%";
             previewText.style.top = inputPosY.value + "%";
-            previewText.style.transform = 	ranslate(-50%, -50%) scale();
+            previewText.style.transform = `translate(-50%, -50%) scale(${inputFontScale.value})`;
             
             // Apply colors
             previewText.children[0].style.color = inputPrimaryColor.value;
