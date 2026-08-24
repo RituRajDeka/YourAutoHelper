@@ -126,11 +126,16 @@ def _try_groq(prompt, response_model, system_prompt, temperature):
     except ImportError:
         raise RuntimeError("groq package not installed")
     client = Groq(api_key=groq_key)
+    # Guard against 413: Groq models have tight context windows.
+    # Truncate prompts that exceed ~6000 chars (roughly 1500 tokens).
+    MAX_PROMPT_CHARS = 6000
+    if len(prompt) > MAX_PROMPT_CHARS:
+        prompt = prompt[:MAX_PROMPT_CHARS] + "\n...[transcript truncated for model context limit]"
     messages = _build_messages(prompt, system_prompt)
     opts: dict[str, Any] = {}
     if response_model:
         opts["response_format"] = {"type": "json_object"}
-    for model in ("groq/compound", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"):
+    for model in ("compound-beta", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"):
         try:
             logger.info("OmniRoute[groq]: model=%s", model)
             cc = client.chat.completions.create(

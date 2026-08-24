@@ -47,7 +47,7 @@ RULES:
 """
 
 
-def _compact_transcript(transcript: dict, max_blocks: int = 150) -> str:
+def _compact_transcript(transcript: dict, max_blocks: int = 60) -> str:
     words = transcript.get("words", [])
     if not words:
         return "(no transcript)"
