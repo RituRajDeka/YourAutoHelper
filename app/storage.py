@@ -70,27 +70,15 @@ class S3StorageProvider(StorageProvider):
         content_type, _ = mimetypes.guess_type(local_path)
         file_size = os.path.getsize(local_path)
 
-        # Try to upload with public-read permission
-        try:
-            with open(local_path, 'rb') as f:
-                self.s3_client.put_object(
-                    Bucket=self.bucket_name,
-                    Key=remote_name,
-                    Body=f,
-                    ContentLength=file_size,
-                    ContentType=content_type or 'video/mp4',
-                    ACL='public-read'
-                )
-        except Exception:
-            # Fall back to uploading without ACL if restricted by bucket policies
-            with open(local_path, 'rb') as f:
-                self.s3_client.put_object(
-                    Bucket=self.bucket_name,
-                    Key=remote_name,
-                    Body=f,
-                    ContentLength=file_size,
-                    ContentType=content_type or 'video/mp4'
-                )
+        # Upload without ACL — Storj and strict S3 providers block public-read ACL
+        with open(local_path, 'rb') as f:
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=remote_name,
+                Body=f,
+                ContentLength=file_size,
+                ContentType=content_type or 'video/mp4'
+            )
 
         if self.public_url_prefix:
             prefix = self.public_url_prefix.rstrip('/')

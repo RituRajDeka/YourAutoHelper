@@ -252,8 +252,8 @@ def _try_rule_based(prompt, response_model, system_prompt, temperature):
         sfx = []
         prompt_lower = prompt.lower()
         if "beast" in prompt_lower or "ksi" in prompt_lower:
-            sfx.append({"time": start_cut + 5.0, "name": "whoosh.mp3", "volume": 50.0})
-            sfx.append({"time": start_cut + 15.0, "name": "pop.mp3", "volume": 50.0})
+            sfx.append({"time": start_cut + 5.0, "name": "whoosh.mp3", "volume": 0.5})
+            sfx.append({"time": start_cut + 15.0, "name": "pop.mp3", "volume": 0.5})
             
         data = {
             "cuts": cuts,
