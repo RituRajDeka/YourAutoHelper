@@ -1364,7 +1364,15 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === "error" || data.detail) {
-                    showAlert("Error: " + (data.detail || data.message), "danger");
+                    let errMsg = data.detail || data.message;
+                    if (typeof errMsg === "object") {
+                        if (Array.isArray(errMsg)) {
+                            errMsg = errMsg.map(e => e.msg || JSON.stringify(e)).join(", ");
+                        } else {
+                            errMsg = JSON.stringify(errMsg);
+                        }
+                    }
+                    showAlert("Error: " + errMsg, "danger");
                 } else {
                     showAlert("Manual generation job queued successfully! Automatic YouTube upload is active.", "success");
                     document.getElementById("manual_editing_prompt").value = "";

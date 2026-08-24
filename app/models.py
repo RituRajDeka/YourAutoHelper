@@ -340,12 +340,7 @@ class GenerateRequest(BaseModel):
 
     @model_validator(mode="after")
     def _require_a_source(self) -> "GenerateRequest":
-        has_url = bool(self.video_url and self.video_url.strip())
-        has_upload = bool(self.upload_id and self.upload_id.strip())
-        if not has_url and not has_upload:
-            raise ValueError(
-                "Provide either a video URL or an uploaded file."
-            )
+        # Allow both to be empty so /api/generate can fallback to monitored channels
         return self
 
 
