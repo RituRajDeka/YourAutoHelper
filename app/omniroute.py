@@ -308,11 +308,10 @@ def completion(
     """
     tiers = [
         ("OmniRoute server", _try_omniroute_server),
-        ("OmniRoute cloud", _try_omniroute_cloud),
-        ("Groq", _try_groq),
-        ("Ollama", _try_ollama),
-        ("OpenAI", _try_openai),
         ("Gemini", _try_gemini),
+        ("Groq", _try_groq),
+        ("OpenAI", _try_openai),
+        ("Ollama", _try_ollama),
         ("Rule-Based Fallback", _try_rule_based)
     ]
     last_exc: Optional[Exception] = None
