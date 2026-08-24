@@ -733,6 +733,13 @@
                             <label for="manual_font_scale">Text Size (Scale)</label>
                             <input type="number" id="manual_font_scale" value="1.0" step="0.1" min="0.4" max="2.5" style="width: 100%;">
                         </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="manual_schedule_type">Publish Queue / Scheduling</label>
+                            <select id="manual_schedule_type" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                                <option value="immediate">Publish / Upload Immediately</option>
+                                <option value="scheduled">Schedule (Using Global Clock times)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -1304,6 +1311,22 @@
             updateCanvasTransform();
         });
 
+        // Update pickers on preset change
+        document.getElementById("manual_caption_style").addEventListener("change", (e) => {
+            const val = e.target.value;
+            if (val === "bold_white") {
+                inputPrimaryColor.value = "#ffffff";
+                inputHighlightColor.value = "#ffffff";
+            } else if (val === "yellow_black") {
+                inputPrimaryColor.value = "#ffffff";
+                inputHighlightColor.value = "#ffd400";
+            } else if (val === "neon_glow") {
+                inputPrimaryColor.value = "#ffffff";
+                inputHighlightColor.value = "#22d3ee";
+            }
+            updateCanvasTransform();
+        });
+
         // Input Observers
         inputPosX.addEventListener("input", updateCanvasTransform);
         inputPosY.addEventListener("input", updateCanvasTransform);
@@ -1339,17 +1362,15 @@
             
             const captionStyle = document.getElementById("manual_caption_style").value;
             
-            if (document.getElementById("manual_primary_color").value !== "#ffffff") {
-                overrides.primary_color = document.getElementById("manual_primary_color").value;
-            }
-            if (document.getElementById("manual_highlight_color").value !== "#ffff00") {
-                overrides.highlight_color = document.getElementById("manual_highlight_color").value;
-            }
+            overrides.primary_color = document.getElementById("manual_primary_color").value;
+            overrides.highlight_color = document.getElementById("manual_highlight_color").value;
 
+            const scheduleType = document.getElementById("manual_schedule_type").value;
             const body = {
                 video_url: null,
                 editing_prompt: prompt || null,
-                caption_style: captionStyle || "bold_white"
+                caption_style: captionStyle || "bold_white",
+                schedule_type: scheduleType
             };
             
             if (Object.keys(overrides).length > 0) {

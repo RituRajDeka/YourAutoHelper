@@ -329,6 +329,7 @@ class GenerateRequest(BaseModel):
         default=Device.AUTO,
         description="Compute device for transcription: auto, cuda (GPU), or cpu.",
     )
+    schedule_type: Optional[str] = Field(default="immediate", description="Schedule type: immediate or scheduled")
     editing_prompt: Optional[str] = Field(
         default=None,
         description="Natural language prompt for AI Editing Director.",

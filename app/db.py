@@ -430,6 +430,66 @@ def get_shorts_by_source_video_id(source_video_id: str) -> List[Dict[str, Any]]:
     conn.close()
     return [dict(r) for r in rows]
 
+def calculate_next_publish_slot() -> datetime:
+    now = datetime.utcnow()
+    
+    # Get settings
+    publish_times_str = get_setting('publish_times') or ""
+    
+    # Get max scheduled time
+    conn = get_db()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute(
+        """SELECT MAX(scheduled_publish_time) as max_time FROM generated_shorts 
+           WHERE status IN ('scheduled', 'ready', 'uploading')"""
+    )
+    row = cursor.fetchone()
+    conn.close()
+    
+    latest = now
+    if row and row['max_time']:
+        try:
+            dt = datetime.fromisoformat(row['max_time'])
+            if dt > latest:
+                latest = dt
+        except Exception:
+            pass
+            
+    # If specific publish times are configured, use them
+    if publish_times_str and publish_times_str.strip():
+        times = []
+        for t in publish_times_str.split(','):
+            t = t.strip()
+            if not t: continue
+            parts = t.split(':')
+            if len(parts) >= 2:
+                try:
+                    times.append((int(parts[0]), int(parts[1])))
+                except ValueError:
+                    pass
+        
+        if times:
+            times.sort()
+            current_day = latest.replace(hour=0, minute=0, second=0, microsecond=0)
+            for h, m in times:
+                candidate = current_day.replace(hour=h, minute=m)
+                if candidate > latest:
+                    return candidate
+            return current_day + timedelta(days=1) + timedelta(hours=times[0][0], minutes=times[0][1])
+
+    # Fallback to simple interval based on shorts_per_day
+    try:
+        shorts_per_day = int(get_setting('shorts_per_day') or 3)
+        if shorts_per_day <= 0: shorts_per_day = 3
+    except Exception:
+        shorts_per_day = 3
+        
+    interval_hours = 24.0 / shorts_per_day
+    if latest == now:
+        return now + timedelta(hours=1.0)
+    return latest + timedelta(hours=interval_hours)
+
 def update_job_from_callback(
     job_id: str,
     status: Optional[str] = None,
@@ -444,10 +504,11 @@ def update_job_from_callback(
     cursor = conn.cursor()
     now = datetime.now().isoformat()
     
-    cursor.execute("SELECT source_video_id, edit_plan_json FROM jobs WHERE id = ?", (job_id,))
+    cursor.execute("SELECT source_video_id, edit_plan_json, request_json FROM jobs WHERE id = ?", (job_id,))
     job_row = cursor.fetchone()
     source_video_id = job_row['source_video_id'] if job_row else None
     edit_plan_json = job_row['edit_plan_json'] if job_row else None
+    request_json = job_row['request_json'] if job_row else None
     
     updates = []
     params = []
@@ -503,6 +564,13 @@ def update_job_from_callback(
             c_status = clip.get('status') or 'ready'
             c_file_path = clip.get('file_path') or clip.get('url') or clip.get('s3_url') or ""
             c_pub_time = clip.get('scheduled_publish_time')
+            if not c_pub_time and request_json:
+                try:
+                    req_data = json.loads(request_json)
+                    if req_data.get("schedule_type") == "scheduled":
+                        c_pub_time = calculate_next_publish_slot().isoformat()
+                except Exception:
+                    pass
             c_edit_plan = clip.get('edit_plan_json') or edit_plan_json
             
             # Since edit_plan_json might be a dict or string, let's normalize it to string

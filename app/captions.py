@@ -60,6 +60,10 @@ def _P(label: str, **kw) -> dict:
 
 
 STYLE_PRESETS: dict[str, dict] = {
+    # --- Custom Mappings ---
+    "yellow_black": _P("Yellow & Black", font_family="Montserrat", animation="highlight", highlight_color="#FFD400", font_size=94, outline=6, position="center"),
+    "neon_glow": _P("Neon Glow", font_family="Luckiest Guy", bold=False, animation="highlight", highlight_color="#22D3EE", outline_color="#101018", font_size=92, outline=6, position="center"),
+    
     # --- Originals ---
     "bold_white": _P("Bold White", highlight_color="#FFFFFF", font_size=96, max_chars=20),
     "karaoke_yellow": _P("Karaoke Yellow", karaoke=True, font_size=92, highlight_color="#FFE600"),

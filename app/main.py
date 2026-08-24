@@ -1088,11 +1088,11 @@ def job_callback(
             clips=req.clips
         )
         
-        # Auto-trigger GHA workflow if status is DOWNLOADED and render_mode is auto
+        # Auto-trigger GHA workflow or local render if status is DOWNLOADED and render_mode is auto
         if req.status and req.status.upper() == "DOWNLOADED":
             old_status = (job_row.get("status") or "").upper()
             if old_status in ("QUEUED", "RUNNING", "COMPLETED", "SUCCESS"):
-                logger.info("[%s] Skip auto-trigger GHA: job is already in %s state", job_id, old_status)
+                logger.info("[%s] Skip auto-trigger render: job is already in %s state", job_id, old_status)
             else:
                 run_mode = db.get_setting("run_mode", "local")
                 render_mode = db.get_setting("render_mode", "auto")
@@ -1110,6 +1110,22 @@ def job_callback(
                     else:
                         logger.error("[%s] Failed to auto-trigger GHA: %s", job_id, err_msg)
                         db.update_job_status(job_id, 'FAILED', error=f"Auto GHA trigger failed: {err_msg}")
+                elif run_mode == "local":
+                    logger.info("[%s] Auto-triggering local render after successful download", job_id)
+                    from .models import GenerateRequest
+                    import json
+                    from . import jobs
+                    
+                    req_data = json.loads(job_row.get("request_json") or "{}")
+                    req_obj = GenerateRequest.model_validate(req_data)
+                    
+                    # Create local Job placeholder and start it
+                    job = jobs.Job(req_obj)
+                    job.id = job_id
+                    with jobs._JOBS_LOCK:
+                        jobs._JOBS[job_id] = job
+                        
+                    jobs.start_job(job)
     except Exception as e:
         logger.exception("Failed to update database from job callback: %s", e)
         raise HTTPException(status_code=500, detail=f"Database update failed: {e}")

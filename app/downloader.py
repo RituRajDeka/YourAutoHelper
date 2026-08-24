@@ -372,6 +372,29 @@ def download_video(
     clip_uuid = uuid.uuid4().hex
     out_template = str(DOWNLOADS_DIR / f"{clip_uuid}.%(ext)s")
     expected_path = DOWNLOADS_DIR / f"{clip_uuid}.mp4"
+    
+    # Try S3 download fallback first if video is already staged in S3
+    video_id = _extract_video_id(url)
+    if video_id:
+        try:
+            from . import storage
+            provider = storage.get_storage_provider()
+            from .storage import S3StorageProvider
+            if isinstance(provider, S3StorageProvider):
+                bucket_name = provider.bucket_name
+                remote_key = f"sources/{video_id}.mp4"
+                try:
+                    provider.s3.head_object(Bucket=bucket_name, Key=remote_key)
+                    logger.info("Found existing source video in S3 bucket: %s. Downloading from S3...", remote_key)
+                    DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+                    provider.s3.download_file(bucket_name, remote_key, str(expected_path.resolve()))
+                    if expected_path.exists():
+                        logger.info("Source file downloaded successfully from S3: %s", expected_path)
+                        return expected_path
+                except Exception as s3_check_exc:
+                    logger.debug("Source video %s not found in S3 or S3 check failed: %s", remote_key, s3_check_exc)
+        except Exception as provider_exc:
+            logger.debug("S3 provider initialization failed for downloader: %s", provider_exc)
 
     # If downloader mode is Invidious, run Invidious proxy download first
     if downloader_mode == "invidious":
