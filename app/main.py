@@ -1133,7 +1133,6 @@ def job_callback(
                     logger.info("[%s] Auto-triggering local render after successful download", job_id)
                     from .models import GenerateRequest
                     import json
-                    from . import jobs
                     
                     req_data = json.loads(job_row.get("request_json") or "{}")
                     req_obj = GenerateRequest.model_validate(req_data)
