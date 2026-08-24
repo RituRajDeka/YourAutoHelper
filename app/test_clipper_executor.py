@@ -96,7 +96,7 @@ def run_test():
     # 5. Run generate_clip
     print("Running generate_clip with FitMode.CROP...")
     crop_output_path = generate_clip(
-        source_mp4=video_path,
+        source_path=video_path,
         start=10.0,
         end=20.0,
         opts=opts_crop
@@ -105,7 +105,7 @@ def run_test():
     
     print("Running generate_clip with FitMode.SQUARE...")
     square_output_path = generate_clip(
-        source_mp4=video_path,
+        source_path=video_path,
         start=10.0,
         end=20.0,
         opts=opts_square

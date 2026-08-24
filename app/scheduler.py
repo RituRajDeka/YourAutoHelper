@@ -305,7 +305,7 @@ class SchedulerWorker:
             
             # Get or run transcription
             transcript = pretranscribe.get_or_transcribe(
-                source_mp4=source_path,
+                source_path=source_path,
                 source_id=source_id,
                 device=device
             )

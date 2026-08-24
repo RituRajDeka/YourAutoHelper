@@ -126,7 +126,7 @@ def run_e2e_test():
     )
 
     clip_output_path = clipper.generate_clip(
-        source_mp4=video_path,
+        source_path=video_path,
         start=10.0,
         end=20.0,
         opts=opts
