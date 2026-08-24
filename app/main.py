@@ -366,6 +366,17 @@ def generate(req: GenerateRequest, request: Request) -> dict:
     if not req.video_url and not req.upload_id:
         from app.db import get_videos_by_status, get_db
         new_videos = get_videos_by_status('new')
+        
+        if not new_videos:
+            # Sync channels immediately to fetch the latest videos if the database is empty!
+            logger.info("No videos found. Triggering synchronous channel sync to populate database...")
+            try:
+                from app.scheduler import sync_channels
+                sync_channels()
+                new_videos = get_videos_by_status('new')
+            except Exception as sync_exc:
+                logger.error("Synchronous channel sync failed: %s", sync_exc)
+
         if not new_videos:
             # Fallback: get the latest video in the database regardless of status for manual editing testing
             try:
@@ -684,12 +695,20 @@ def get_channels() -> list:
 
 
 @app.post("/api/channels")
-def add_channel(req: AddChannelRequest) -> dict:
+def add_channel(req: AddChannelRequest, background_tasks: BackgroundTasks) -> dict:
     try:
         try:
             channel = db.add_source_channel(url=req.url, name=req.name)
         except TypeError:
             channel = db.add_source_channel(req.url, req.name)
+        
+        # Trigger background channel sync to populate database immediately
+        try:
+            from app.scheduler import sync_channels
+            background_tasks.add_task(sync_channels)
+        except Exception as e:
+            logger.warning("Could not queue channel sync: %s", e)
+            
         return {"status": "success", "channel": channel}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
