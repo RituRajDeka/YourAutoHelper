@@ -163,6 +163,125 @@ def _try_ollama(prompt, response_model, system_prompt, temperature):
     return _parse_response(text, response_model)
 
 
+
+# ---------------------------------------------------------------------------
+# Tier 5 - OpenAI
+# ---------------------------------------------------------------------------
+def _try_openai(prompt, response_model, system_prompt, temperature):
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY not set - skipping OpenAI tier")
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    body = {
+        "model": "gpt-4o-mini",
+        "messages": _build_messages(prompt, system_prompt),
+        "temperature": temperature
+    }
+    if response_model:
+        body["response_format"] = {"type": "json_object"}
+        
+    logger.info("OmniRoute[openai]: POST %s", url)
+    resp = requests.post(url, json=body, headers=headers, timeout=30)
+    resp.raise_for_status()
+    text = resp.json()["choices"][0]["message"]["content"]
+    return _parse_response(text, response_model)
+
+
+# ---------------------------------------------------------------------------
+# Tier 6 - Google Gemini
+# ---------------------------------------------------------------------------
+def _try_gemini(prompt, response_model, system_prompt, temperature):
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY not set - skipping Gemini tier")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    
+    full_prompt = ""
+    if system_prompt:
+        full_prompt += f"{system_prompt}\n\n"
+    full_prompt += prompt
+    
+    body = {
+        "contents": [{
+            "parts": [{"text": full_prompt}]
+        }],
+        "generationConfig": {
+            "temperature": temperature
+        }
+    }
+    if response_model:
+        body["generationConfig"]["responseMimeType"] = "application/json"
+        
+    logger.info("OmniRoute[gemini]: POST %s", "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent")
+    resp = requests.post(url, json=body, headers=headers, timeout=30)
+    resp.raise_for_status()
+    text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+    return _parse_response(text, response_model)
+
+
+# ---------------------------------------------------------------------------
+# Tier 7 - Rule-Based Fallback Generator
+# ---------------------------------------------------------------------------
+def _try_rule_based(prompt, response_model, system_prompt, temperature):
+    logger.info("OmniRoute[rule_based]: Falling back to local rules...")
+    if response_model is None:
+        return "{}"
+        
+    class_name = response_model.__name__
+    if class_name == "EditPlan":
+        import re
+        times = [float(x) for x in re.findall(r'\[(\d+\.\d+)-\d+\.\d+\]', prompt)]
+        end_times = [float(x) for x in re.findall(r'\[\d+\.\d+-(\d+\.\d+)\]', prompt)]
+        
+        duration = 30.0
+        if end_times:
+            duration = max(end_times)
+            
+        start_cut = 0.0
+        if duration > 45.0:
+            start_cut = min(10.0, duration - 45.0)
+        end_cut = min(start_cut + 45.0, duration)
+        
+        cuts = [{"start_time": start_cut, "end_time": end_cut}]
+        zooms = [
+            {"time": start_cut + 5.0, "duration": 2.0, "scale": 1.3, "x": 0.5, "y": 0.5},
+            {"time": start_cut + 15.0, "duration": 2.0, "scale": 1.4, "x": 0.5, "y": 0.5}
+        ]
+        sfx = []
+        prompt_lower = prompt.lower()
+        if "beast" in prompt_lower or "ksi" in prompt_lower:
+            sfx.append({"time": start_cut + 5.0, "name": "whoosh.mp3", "volume": 50.0})
+            sfx.append({"time": start_cut + 15.0, "name": "pop.mp3", "volume": 50.0})
+            
+        data = {
+            "cuts": cuts,
+            "zooms": zooms,
+            "speed_changes": [],
+            "transitions": [],
+            "sound_effects": sfx,
+            "music_changes": [],
+            "emphasis_points": [],
+            "caption_preferences": None
+        }
+        return response_model.model_validate(data)
+        
+    elif class_name == "SEOMetadata":
+        import re
+        title_match = re.search(r'Original Video Title:\s*(.*)', prompt)
+        orig_title = title_match.group(1).strip() if title_match else "Short"
+        
+        clean_title = orig_title[:50] + " ?? #shorts"
+        data = {
+            "title": clean_title,
+            "description": f"Must watch highlight from {orig_title}! #shorts #viral #trending",
+            "tags": ["shorts", "viral", "trending", "highlight"]
+        }
+        return response_model.model_validate(data)
+        
+    return response_model()
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -187,6 +306,9 @@ def completion(
         ("OmniRoute cloud", _try_omniroute_cloud),
         ("Groq", _try_groq),
         ("Ollama", _try_ollama),
+        ("OpenAI", _try_openai),
+        ("Gemini", _try_gemini),
+        ("Rule-Based Fallback", _try_rule_based)
     ]
     last_exc: Optional[Exception] = None
     for name, fn in tiers:

@@ -662,12 +662,8 @@
         <div class="grid-2">
             <div>
                 <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.5;">
-                    Provide a specific YouTube video URL and an optional AI editing prompt.
+                    Type a custom prompt below. The AI Editor will automatically pull the next new video from your monitored YouTube channels and generate it using your prompt.
                 </p>
-                <div class="form-group">
-                    <label for="manual_video_url">Video URL</label>
-                    <input type="url" id="manual_video_url" placeholder="https://www.youtube.com/watch?v=...">
-                </div>
                 
                 <h4 style="font-size: 14px; margin: 15px 0 10px; color: var(--primary-color);">AI Editing Prompt</h4>
                 <div class="form-group">
@@ -1320,13 +1316,7 @@
         // ----------------------------------------
 
         document.getElementById("generate-manual-btn").addEventListener("click", () => {
-            const videoUrl = document.getElementById("manual_video_url").value;
             const prompt = document.getElementById("manual_editing_prompt").value;
-            
-            if (!videoUrl) {
-                showAlert("Please enter a Video URL.", "danger");
-                return;
-            }
             
             const btn = document.getElementById("generate-manual-btn");
             const originalText = btn.innerText;
@@ -1357,7 +1347,7 @@
             }
 
             const body = {
-                video_url: videoUrl,
+                video_url: null,
                 editing_prompt: prompt || null,
                 caption_style: captionStyle || "bold_white"
             };
@@ -1377,7 +1367,6 @@
                     showAlert("Error: " + (data.detail || data.message), "danger");
                 } else {
                     showAlert("Manual generation job queued successfully! Automatic YouTube upload is active.", "success");
-                    document.getElementById("manual_video_url").value = "";
                     document.getElementById("manual_editing_prompt").value = "";
                     pollAutomationStatus();
                 }

@@ -361,6 +361,18 @@ def generate(req: GenerateRequest, request: Request) -> dict:
     import hashlib
     import uuid
     from . import github_dispatch
+    
+    # If no URL or upload is provided, get the next video from monitored channels
+    if not req.video_url and not req.upload_id:
+        from app.db import get_videos_by_status
+        new_videos = get_videos_by_status('new')
+        if not new_videos:
+            raise HTTPException(
+                status_code=400,
+                detail="No new videos found in monitored channels. Please add a monitored channel or wait for sync."
+            )
+        req.video_url = new_videos[0]['url']
+        req.upload_name = new_videos[0]['title']
 
     run_mode = db.get_setting("run_mode", "local")
     if run_mode == "remote":
@@ -414,16 +426,32 @@ def generate(req: GenerateRequest, request: Request) -> dict:
         # Edit plan JSON
         edit_plan_json = json.dumps(req.edit_plan) if req.edit_plan else None
         
+        # Get downloader mode to determine initial status
+        downloader_mode = db.get_setting("downloader_mode", "yt-dlp")
+        initial_status = 'DOWNLOAD_QUEUED' if downloader_mode == 'local_agent' else 'PENDING'
+        
         # Create DB job record
         db.add_job(
             job_id=job_id,
             source_video_id=source_video_id,
-            status='PENDING',
+            status=initial_status,
             request_json=req_json,
             callback_token=callback_token,
             edit_plan_json=edit_plan_json
         )
         
+        if downloader_mode == 'local_agent':
+            logger.info("[%s] remote job enqueued for local agent download", job_id)
+            # Register in-memory job placeholder to support SSE /progress and /result
+            job = jobs.Job(req)
+            job.id = job_id
+            job.status = "queued"
+            job.stage = "queued"
+            job.message = "Enqueued for local downloader."
+            with jobs._JOBS_LOCK:
+                jobs._JOBS[job_id] = job
+            return {"job_id": job_id}
+            
         # Calculate server_url
         server_url = db.get_setting("public_server_url")
         if not server_url:
