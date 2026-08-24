@@ -18,6 +18,9 @@ def dispatch_workflow(job_id: str, callback_token: str, server_url: str) -> tupl
         github_token = os.environ.get('CLIPFORGE_GITHUB_TOKEN') or os.environ.get('github_token')
         
     github_repo = get_setting('github_repo')
+    if not github_repo:
+        github_repo = os.environ.get('CLIPFORGE_GITHUB_REPO') or os.environ.get('github_repo')
+        
     github_ref = get_setting('github_ref', 'main')
     github_workflow = get_setting('github_workflow', 'render.yml')
 
@@ -25,10 +28,20 @@ def dispatch_workflow(job_id: str, callback_token: str, server_url: str) -> tupl
         err = "GitHub token setting is not configured (missing in DB and env vars)."
         logger.error(f"GitHub dispatch failed: {err}")
         return False, err
+        
+    # Clean up token (remove accidental whitespace or literal quotes)
+    github_token = str(github_token).strip().strip('"').strip("'")
+    
     if not github_repo or '/' not in github_repo:
         err = f"GitHub repository setting is invalid or not configured: {github_repo}"
         logger.error(f"GitHub dispatch failed: {err}")
         return False, err
+        
+    github_repo = str(github_repo).strip().strip('"').strip("'")
+
+    # Safe logging to debug the token format without leaking it
+    token_preview = f"{github_token[:4]}*** (length: {len(github_token)})"
+    logger.info(f"Dispatching workflow on repo '{github_repo}' using token: {token_preview}")
 
     url = f"https://api.github.com/repos/{github_repo}/actions/workflows/{github_workflow}/dispatches"
     
