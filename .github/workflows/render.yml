@@ -31,7 +31,6 @@ jobs:
 
       - name: Install FFmpeg
         run: |
-          # Replace slow Azure mirrors with main Ubuntu mirrors to prevent hanging
           sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y ffmpeg
@@ -42,22 +41,26 @@ jobs:
       - name: Run worker
         env:
           PYTHONPATH: ${{ github.workspace }}
-          # ── AI / LLM Keys ──────────────────────────────────────────────────
+          # ── OmniRoute (custom AI gateway) ─────────────────────────────────
+          OMNIROUTE_BASE_URL: ${{ secrets.OMNIROUTE_BASE_URL }}
+          OMNIROUTE_API_KEY: ${{ secrets.OMNIROUTE_API_KEY }}
+          OMNIROUTE_CLOUD_KEY: ${{ secrets.OMNIROUTE_CLOUD_KEY }}
+          # ── AI / LLM Keys ─────────────────────────────────────────────────
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OMNIROUTE_CLOUD_KEY: ${{ secrets.OMNIROUTE_CLOUD_KEY }}
-          # ── Storage ────────────────────────────────────────────────────────
+          # ── Storage (Storj S3) ────────────────────────────────────────────
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
           S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
           S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
           S3_PUBLIC_URL_PREFIX: ${{ secrets.S3_PUBLIC_URL_PREFIX }}
-          # ── YouTube ────────────────────────────────────────────────────────
+          # ── YouTube OAuth ─────────────────────────────────────────────────
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-          # ── Misc ───────────────────────────────────────────────────────────
+          # ── Misc ──────────────────────────────────────────────────────────
+          CLIPFORGE_GITHUB_TOKEN: ${{ secrets.CLIPFORGE_GITHUB_TOKEN }}
           CLIPFORGE_CALLBACK_SERVER_URL: ${{ inputs.server_url }}
         run: |
           python3 app/gha_worker.py \
