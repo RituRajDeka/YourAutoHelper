@@ -364,12 +364,25 @@ def generate(req: GenerateRequest, request: Request) -> dict:
     
     # If no URL or upload is provided, get the next video from monitored channels
     if not req.video_url and not req.upload_id:
-        from app.db import get_videos_by_status
+        from app.db import get_videos_by_status, get_db
         new_videos = get_videos_by_status('new')
+        if not new_videos:
+            # Fallback: get the latest video in the database regardless of status for manual editing testing
+            try:
+                conn = get_db()
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM source_videos ORDER BY published_at DESC LIMIT 1")
+                row = cursor.fetchone()
+                conn.close()
+                if row:
+                    new_videos = [dict(row)]
+            except Exception as db_err:
+                logger.error("DB fallback check failed: %s", db_err)
+                
         if not new_videos:
             raise HTTPException(
                 status_code=400,
-                detail="No new videos found in monitored channels. Please add a monitored channel or wait for sync."
+                detail="No videos found in your monitored channels database. Please add a monitored channel first."
             )
         req.video_url = new_videos[0]['url']
         req.upload_name = new_videos[0]['title']
