@@ -42,6 +42,23 @@ jobs:
       - name: Run worker
         env:
           PYTHONPATH: ${{ github.workspace }}
+          # ── AI / LLM Keys ──────────────────────────────────────────────────
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OMNIROUTE_CLOUD_KEY: ${{ secrets.OMNIROUTE_CLOUD_KEY }}
+          # ── Storage ────────────────────────────────────────────────────────
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          S3_PUBLIC_URL_PREFIX: ${{ secrets.S3_PUBLIC_URL_PREFIX }}
+          # ── YouTube ────────────────────────────────────────────────────────
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          # ── Misc ───────────────────────────────────────────────────────────
+          CLIPFORGE_CALLBACK_SERVER_URL: ${{ inputs.server_url }}
         run: |
           python3 app/gha_worker.py \
             --job-id "${{ inputs.job_id }}" \
